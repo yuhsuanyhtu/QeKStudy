@@ -188,11 +188,16 @@ Status: **Backlog — Deferred / Trigger-based**
 ### BDD-005 — 英文最小學習與獎勵閉環
 ### English Minimum Learning & Reward Loop
 
-狀態：**ACTIVE — SDD Draft**
+狀態：**Deferred — 等待 BDD-004**
 
-Status: **ACTIVE — SDD Draft**
+Status: **Deferred — waiting for BDD-004**
 
-BDD-005 已確認，**SDD-005 已建立 Draft 並等待確認**。目前尚未進 TDD 或 coding。
+BDD-005 的產品方向沒有取消，但需求已擴充：
+- 學習與獎勵紀錄要寫入 Google Sheet。
+- 零用金要進入「待領 → 家長確認發放 → 已發放紀錄」流程。
+- 第一個一般測驗仍維持中翻英。
+
+因此現有 SDD-005 Draft 需要在 BDD-004 重新確認後重寫，現在不進 TDD。
 
 - 第一科固定從 **英文** 開始。
 - 第一版至少包含單字閃卡與一種真正可判定答對/答錯的測驗。
