@@ -1,7 +1,7 @@
 # TDD-005 — 英文最小學習與獎勵閉環
 # English Minimum Learning & Reward Loop
 
-狀態 Status: **GREEN — 99/99 PASS；尚未完成部署驗收 / deployment acceptance pending**  
+狀態 Status: **GREEN — 106/106 PASS；尚未完成部署驗收 / deployment acceptance pending**  
 對應 BDD: **BDD-005 APPROVED**  
 對應 SDD: **SDD-005 APPROVED**  
 日期 Date: **2026-09-18**
@@ -309,3 +309,21 @@ Verification run: `35347546883` — **97/97 PASS**
 - inline JavaScript 必須能被 JavaScript parser 正常解析。
 
 Verification run: `35354662017` — **99/99 PASS**
+
+
+### Performance / rapid-action follow-up
+
+手動驗收發現：Apps Script round trip 較慢時，學生快速連續操作可能造成重疊 request，並被 UI 誤顯示成 `PERSISTENCE_FAILED`。
+
+修正：
+
+- English catalog 使用 Apps Script `CacheService` 做 60 秒短 cache。
+- Answer / flashcard persistence 在同一個 script lock 內讀 history、計算、append，避免 race condition。
+- 寫入後直接用既有 events + 新 event 計算 summary，不再立刻重讀整張 Sheet。
+- Script lock 改為最多等待 10 秒，不再 5 秒內搶不到就立即失敗。
+- UI 在 server request 未完成時暫停相關按鈕，避免 double submit / concurrent write。
+- transport error 不再一律標成 `PERSISTENCE_FAILED`，會顯示真正 server request 錯誤。
+
+Verification run: `35358655698` — **106/106 PASS**
+
+Content cache 最多可能讓剛 push 的 repo 題目延遲約 60 秒才反映，這是目前為降低每題網路讀取延遲的刻意取捨。
