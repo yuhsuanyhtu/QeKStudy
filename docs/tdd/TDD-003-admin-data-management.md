@@ -90,3 +90,31 @@ Red 驗證後才進：
 6. add parent rename UI
 7. keep public admin destructive UI disabled
 8. run full regression
+
+
+## Actual Red Verification / 實際 Red 驗證
+
+GitHub Actions run: `35312326594`
+
+結果：
+
+- Tests reported by Node runner: 35
+- Pass: 29
+- Fail: 6
+- Overall CI: expected failure (RED)
+
+已確認：
+
+- BDD-001 / BDD-002 原本 28 個 regression tests 全部仍通過。
+- 新增的「公開 Demo 不暴露 administrator delete controls」安全 contract 也通過。
+- 6 個 failure 都屬於尚未實作的 BDD-003 expectation：
+  1. `src/admin-data-management-service.js` 尚不存在。
+  2. Parent family rename UI 尚不存在。
+  3. Parent student rename UI 尚不存在。
+  4. Apps Script 尚未要求 schema version 2。
+  5. `audit_log` / deletion metadata 尚不存在。
+  6. rename / confirmed-delete Apps Script operations 尚不存在。
+
+因此這是有效的 TDD Red，而不是既有功能 regression。
+
+This is a valid TDD Red state, not a regression of BDD-001/002.
