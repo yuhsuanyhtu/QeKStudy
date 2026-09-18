@@ -1,6 +1,6 @@
 # TDD-003 — 名稱維護與管理員資料管理 / Rename & Administrator Data Management
 
-狀態 Status: RED  
+狀態 Status: GREEN / REGRESSION 57/57 PASSED / DEPLOYMENT PENDING  
 對應 BDD: BDD-003  
 對應 SDD: SDD-003  
 日期 Date: 2026-09-18
@@ -118,3 +118,32 @@ GitHub Actions run: `35312326594`
 因此這是有效的 TDD Red，而不是既有功能 regression。
 
 This is a valid TDD Red state, not a regression of BDD-001/002.
+
+
+## Green Verification / Green 驗證
+
+GitHub Actions run: `35312578717`
+
+Result:
+
+- Total: 57
+- Pass: 57
+- Fail: 0
+
+Green implementation includes:
+
+- `src/admin-data-management-service.js`
+- parent-owned family rename
+- parent-owned student rename
+- administrator cross-family rename contracts
+- administrator-only soft deletion
+- delete confirmation
+- cascade soft-delete for family children
+- audit events
+- schema v2 Apps Script adapter
+- parent rename UI
+- public UI still excludes administrator destructive controls
+
+Schema migration v1 → v2 was applied after creating a full Google Sheet backup.
+
+BDD-003 is not Done yet because the Apps Script deployment still needs to be updated to the schema-v2 code and the parent rename UI requires manual deployed acceptance.
