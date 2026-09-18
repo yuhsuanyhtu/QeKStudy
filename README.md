@@ -185,23 +185,23 @@ Status: **Backlog — Deferred / Trigger-based**
 - 登出後私人操作立即失效。
 - 本 Story 暫緩；撿回條件請看 `docs/STATUS.md`。
 
-### BDD-005 — 核心練習與錯題複習指引
-### Core Practice & Wrong-answer Review Guidance
+### BDD-005 — 英文最小學習與獎勵閉環
+### English Minimum Learning & Reward Loop
 
 狀態：**ACTIVE — BDD Draft**
 
 Status: **ACTIVE — BDD Draft**
 
-> 以下是目前產品討論方向；正式可驗收行為仍須回寫並確認 BDD 後才算定案。  
-> The following reflects current product direction; formal behavior is not final until the BDD is revised and accepted.
+BDD 已重寫，目前仍為 **DRAFT、尚未進 SDD**。
 
-- 第一個學習科目先從 **英文** 開始，原因是目前已有最強的真實學生與老師回饋訊號。
-- 一輪練習不只包含目前內容，也要逐步混入以前已學內容。
-- 會考考古題是否可出，應看該題所需知識是否都已學過，而不是只看年級標籤。
-- 第一版可人工挑選少量 Demo 題，不先做自動選題演算法。
-- 答錯時提供可追溯、可行動的複習方向；學生自己決定繼續、重試或回去複習。
-- 第一次作答結果要保留，後來答對不能把第一次錯誤洗掉。
-- **零用金屬於最小真實學習閉環的一部分，不是可任意拿掉的附加功能；實際規則仍待 BDD 討論。**
+- 第一科固定從 **英文** 開始。
+- 第一版至少包含單字閃卡與一種真正可判定答對/答錯的測驗。
+- 閃卡必須把該課每個單字各自實際顯示至少 1 秒，全部完成才取得基本接觸獎勵。
+- 測驗要同時包含目前內容、以前已學內容，以及 prerequisite 全部已學的會考考古題。
+- 答錯時提供可行動的複習方向；學生自己決定繼續或重試，不強迫 remediation。
+- 第一次作答結果必須保留，後來答對不能把第一次錯誤洗掉。
+- 零用金是核心機制：可依困難程度給不同基礎點數、已掌握內容重複複習時獎勵遞減、每科每日有頂標；達頂標後仍可繼續學習。
+- 本 BDD 不指定實際金額，也不做自動選題、完整題庫或正式多家庭學習紀錄。
 
 ---
 
