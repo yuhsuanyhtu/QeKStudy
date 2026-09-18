@@ -54,7 +54,7 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · TDD RED VERIFIED` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` · TDD: `docs/tdd/TDD-005-english-learning-reward-loop.md` |
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · TDD GREEN · DEPLOYMENT PENDING` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` · TDD: `docs/tdd/TDD-005-english-learning-reward-loop.md` |
 
 ## Backlog / 待辦 Story
 
@@ -72,7 +72,7 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 | **BDD-002 — 家庭與孩子資料持久化** | `DONE` | Google Sheet / Apps Script durable persistence |
 | **BDD-003 — 名稱維護與管理員資料管理** | `DONE` | Parent rename, admin management domain, schema v2, audit log, soft delete safety boundary |
 
-Current regression baseline from BDD-001～003 remains **57 / 57 PASS**. TDD-005 Red run: **90 total · 57 pass · 33 expected fail**.
+Current automated regression: **90 / 90 PASS**. TDD-005 code is Green; Apps Script deployment and UI/Sheet acceptance remain pending.
 
 ---
 
