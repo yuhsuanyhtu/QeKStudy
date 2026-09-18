@@ -37,7 +37,7 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop**
 
-BDD-005 behavior is approved. The next Agile phase is SDD-005; design has not started yet.
+BDD-005 behavior is approved. SDD-005 is now drafted and awaiting review; TDD has not started.
 
 `English → flashcard/practice → current + prior + eligible CAP content → review target → reward summary`
 
@@ -49,7 +49,7 @@ BDD-004 Authentication 維持 `DEFERRED · TRIGGER-BASED`。
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · BDD APPROVED` | 驗證英文閃卡接觸、真正測驗、目前/舊知識統整、符合已學範圍的會考題、錯題自主修正，以及難度/重複遞減/每日頂標的零用金獎勵。 | `docs/bdd/BDD-005-core-practice-review-guidance.feature` |
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · SDD DRAFT` | 驗證英文閃卡接觸、真正測驗、目前/舊知識統整、符合已學範圍的會考題、錯題自主修正，以及難度/重複遞減/每日頂標的零用金獎勵。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
 
 ## Backlog / 待辦 Story
 
