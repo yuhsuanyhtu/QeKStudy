@@ -46,7 +46,6 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 - 學習與獎勵紀錄寫入 Google Sheet。
 - 每筆 learning event 都保留 family_id / student_id，資料邊界先設計乾淨。
 - 學習產生的獎勵累積進 saving pool。
-- 英文教材/題目 source of truth 放在 repo JSON；一般內容更新不需要重新部署 Apps Script。
 - 真正家長提領 / payout 仍是後續獨立 Story。
 
 ---
@@ -55,7 +54,7 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · TDD GREEN · DEPLOYMENT PENDING` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` · TDD: `docs/tdd/TDD-005-english-learning-reward-loop.md` |
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · TDD RED VERIFIED` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` · TDD: `docs/tdd/TDD-005-english-learning-reward-loop.md` |
 
 ## Backlog / 待辦 Story
 
@@ -73,7 +72,7 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 | **BDD-002 — 家庭與孩子資料持久化** | `DONE` | Google Sheet / Apps Script durable persistence |
 | **BDD-003 — 名稱維護與管理員資料管理** | `DONE` | Parent rename, admin management domain, schema v2, audit log, soft delete safety boundary |
 
-Current automated regression: **106 / 106 PASS**. TDD-005 code is Green; Apps Script deployment and UI/Sheet acceptance remain pending.
+Current regression baseline from BDD-001～003 remains **57 / 57 PASS**. TDD-005 Red run: **90 total · 57 pass · 33 expected fail**.
 
 ---
 

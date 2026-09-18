@@ -1,19 +1,16 @@
 const QEK_SPREADSHEET_ID = '16GjrllU2rRgUBXH7evGQCFqOTHQbhtJRFX6CjkvKBA8';
-const QEK_SCHEMA_VERSION = 3;
+const QEK_SCHEMA_VERSION = 2;
 const QEK_SHEETS = {
   families: 'families',
   students: 'students',
   meta: 'schema_meta',
   audit: 'audit_log',
-  learning: 'learning_events',
 };
 
-function doGet(e) {
-  const view = e && e.parameter ? String(e.parameter.view || '') : '';
-  const isEnglish = view.toLowerCase() === 'english';
-  return HtmlService.createTemplateFromFile(isEnglish ? 'English' : 'Index')
+function doGet() {
+  return HtmlService.createTemplateFromFile('Index')
     .evaluate()
-    .setTitle(isEnglish ? 'QeKStudy · English' : 'QeKStudy · Persistence Demo');
+    .setTitle('QeKStudy · Persistence Demo');
 }
 
 function apiBootstrap(parentId) {
@@ -434,12 +431,9 @@ function appendRow_(sheetName, values) {
 
 function withScriptLock_(work) {
   const lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000);
-  } catch (error) {
+  if (!lock.tryLock(5000)) {
     throw qekError_('PERSISTENCE_BUSY');
   }
-
   try {
     return work();
   } finally {
@@ -463,88 +457,4 @@ function qekError_(code) {
   const error = new Error(code);
   error.code = code;
   return error;
-}
-
-
-function controlledStudent_() {
-  const studentId = PropertiesService.getScriptProperties()
-    .getProperty('QEK_CONTROLLED_STUDENT_ID');
-  if (!studentId) throw qekError_('CONTROLLED_STUDENT_NOT_CONFIGURED');
-
-  const row = findStudentRow_(studentId);
-  if (!row || row.status !== 'active') {
-    throw qekError_('RESOURCE_NOT_AVAILABLE');
-  }
-
-  return {
-    studentId: String(row.student_id),
-    familyId: String(row.family_id),
-    displayName: String(row.display_name),
-  };
-}
-
-function listLearningEventsForStudent_(studentId) {
-  return readObjects_(QEK_SHEETS.learning)
-    .filter(function(row) {
-      return String(row.student_id) === String(studentId);
-    })
-    .map(function(row) {
-      return {
-        learningEventId: String(row.learning_event_id),
-        occurredAt: String(row.occurred_at),
-        familyId: String(row.family_id),
-        studentId: String(row.student_id),
-        subject: String(row.subject),
-        sessionId: String(row.session_id),
-        eventType: String(row.event_type),
-        lessonId: String(row.lesson_id),
-        contentId: String(row.content_id),
-        questionSourceType: String(row.question_source_type),
-        attemptNo: row.attempt_no === '' ? '' : Number(row.attempt_no),
-        correct: row.correct === '' ? '' : String(row.correct).toLowerCase() === 'true',
-        firstAttemptCorrect: row.first_attempt_correct === '' ? '' : String(row.first_attempt_correct).toLowerCase() === 'true',
-        rewardAmount: Number(row.reward_amount) || 0,
-        reviewTarget: String(row.review_target || ''),
-        sourceRef: String(row.source_ref || ''),
-        note: String(row.note || ''),
-      };
-    });
-}
-
-function calculateSavingPool_(events) {
-  return (events || []).reduce(function(sum, event) {
-    return sum + Math.max(0, Number(event.rewardAmount) || 0);
-  }, 0);
-}
-
-function calculateDailySubjectEarned_(events, subject, dateString) {
-  return (events || []).reduce(function(sum, event) {
-    const eventDate = String(event.occurredAt || '').slice(0, 10);
-    if (event.subject === subject && eventDate === dateString) {
-      return sum + Math.max(0, Number(event.rewardAmount) || 0);
-    }
-    return sum;
-  }, 0);
-}
-
-function appendLearningEvent_(event) {
-  appendRow_(QEK_SHEETS.learning, [
-    event.learningEventId,
-    event.occurredAt,
-    event.familyId,
-    event.studentId,
-    event.subject,
-    event.sessionId,
-    event.eventType,
-    event.lessonId,
-    event.contentId,
-    event.questionSourceType,
-    event.attemptNo,
-    event.correct,
-    event.firstAttemptCorrect,
-    event.rewardAmount,
-    event.reviewTarget,
-    event.sourceRef,
-    event.note,
-  ]);
 }

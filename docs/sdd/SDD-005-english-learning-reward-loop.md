@@ -120,37 +120,13 @@ The English student experience is added to the existing Apps Script web app so w
 - 每題的複習方向；
 - 每題來源。
 
-**教材與題目不寫死在 Apps Script。**
+內容先放在 repo 內的 Apps Script source：
 
-內容的 source of truth 放在 repo：
+`apps-script/EnglishContent.gs`
 
-`data/english/catalog.json`
+資料和畫面邏輯分開。
 
-Apps Script 透過 `UrlFetchApp` 讀取 main branch 的 JSON。
-
-因此一般教材內容修改只需要：
-
-> 修改 repo JSON → push
-
-不需要因為改一題或改一個單字就重新部署 Apps Script。
-
-每個 lesson / word / question 都必須有：
-
-- stable ID
-- revision
-
-如果題目內容有實質修改，建立新 revision，舊 revision 保留但可標成 inactive。
-learning event 的 `content_id` 使用 `id@revision`，而 `source_ref` 同時記錄 catalogVersion，避免未來題目更新後無法還原學生當時做的是哪一版。
-
-Apps Script 仍負責：
-
-- 讀內容；
-- 驗證資料；
-- 判分；
-- 算獎勵；
-- 寫 learning_events。
-
-Browser 不直接決定正確答案或 reward_amount。
+以後題庫變大，再另開 Story 做正式題庫管理。
 
 ---
 
@@ -671,10 +647,8 @@ BDD-005 不改：
 apps-script/
   English.html
   EnglishLogic.gs
+  EnglishContent.gs
   EnglishRewardConfig.gs
-
-data/english/
-  catalog.json
 
 src/learning/
   flashcard-exposure.js
@@ -767,4 +741,4 @@ BDD-005 只有全部完成才算 Done：
 **沒有可操作 UI，不算 Done。**
 
 **English:**  
-SDD-005 uses a controlled single-student binding for now, stores learning content as versioned JSON in the repository, and writes fully partitioned learning events to Google Sheets. Authentication can later be added without redesigning the learning database, while normal content edits do not require an Apps Script redeploy.
+SDD-005 uses a controlled single-student binding for now, but writes fully partitioned learning events to Google Sheets so Authentication can be added later without redesigning the learning database.

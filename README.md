@@ -188,9 +188,9 @@ Status: **Backlog — Deferred / Trigger-based**
 ### BDD-005 — 英文最小學習與獎勵閉環
 ### English Minimum Learning & Reward Loop
 
-狀態：**ACTIVE — TDD Green / Deployment Pending**
+狀態：**ACTIVE — TDD Red**
 
-Status: **ACTIVE — TDD Green / Deployment Pending**
+Status: **ACTIVE — TDD Red**
 
 BDD-004 已 review，但完整 Authentication 延後。
 BDD-005 以單一家庭 / 單一學生受控版本繼續：
@@ -198,10 +198,9 @@ BDD-005 以單一家庭 / 單一學生受控版本繼續：
 - 學習與獎勵紀錄寫入 Google Sheet。
 - 每筆紀錄保留 family_id / student_id。
 - 學習獎勵累積進 saving pool。
-- 英文教材與題目放在 `data/english/catalog.json`；一般題目更新只改 repo，不需要重新部署 Apps Script。
 - 真正家長提領 / payout 是後續獨立 Story。
 - 第一個一般測驗維持中翻英。
-- TDD-005 已轉綠：106/106 PASS。Google Sheet 已是 schema v3 並有 learning_events；Apps Script English UI 尚待部署與真實 Sheet 驗收。
+- SDD-005 已確認；目前正式進入 TDD-005 Red。schema v3 / learning_events 尚未實作或 migration。
 
 - 第一科固定從 **英文** 開始。
 - 第一版至少包含單字閃卡與一種真正可判定答對/答錯的測驗。
