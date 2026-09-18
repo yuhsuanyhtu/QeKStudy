@@ -164,6 +164,19 @@ Status: **Done — Regression 57/57 PASS**
 - `docs/tdd/TDD-003-admin-data-management.md`
 - `docs/acceptance/Acceptance-003-admin-data-management.md`
 
+### BDD-004 — 使用者登入與角色辨識
+### Authentication & Role Recognition
+
+狀態：**BDD Draft — 待確認**
+
+Status: **BDD Draft — pending approval**
+
+- 未登入不能讀寫家庭私人資料。
+- 已登記帳號登入後，server-side 決定 PARENT / ADMIN。
+- Browser 不能靠傳入 role / parentId 冒用身份。
+- 未登記帳號不會被自動賦予家庭或管理員權限。
+- 登出後私人操作立即失效。
+
 ---
 
 ## Demo / 驗收畫面
