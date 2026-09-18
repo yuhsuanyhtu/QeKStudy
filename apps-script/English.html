@@ -80,8 +80,8 @@
   <section class="panel" id="home">
     <h2>今天要做什麼？</h2>
     <div class="row">
-      <button id="start-flashcards" class="primary">單字閃卡</button>
-      <button id="start-quiz">中翻英測驗</button>
+      <button id="start-flashcards" class="primary" disabled>單字閃卡</button>
+      <button id="start-quiz" disabled>中翻英測驗</button>
     </div>
   </section>
 
@@ -141,6 +141,57 @@ var firstTryCount = 0;
 var retryCorrectCount = 0;
 var unresolvedCount = 0;
 var reviewItems = [];
+var requestInFlight = true;
+
+function setBusy(busy, message) {
+  requestInFlight = busy;
+
+  [
+    "start-flashcards",
+    "start-quiz",
+    "flashcard-prev",
+    "flashcard-next",
+    "flashcard-back",
+    "submit-answer",
+    "retry-answer",
+    "continue-question",
+    "quiz-back"
+  ].forEach(function(id) {
+    var element = document.getElementById(id);
+    if (element) element.disabled = busy;
+  });
+
+  var status = document.getElementById("status");
+
+  if (busy) {
+    status.dataset.busy = "true";
+    status.className = "muted";
+    status.textContent = message || "處理中…";
+    return;
+  }
+
+  if (status.dataset.busy === "true") {
+    delete status.dataset.busy;
+
+    if (bootstrap && !bootstrap.rewardConfigured) {
+      status.className = "muted";
+      status.textContent =
+        "目前先測學習與紀錄流程；正式零用金金額尚未確認，因此不會加錢。";
+    } else {
+      status.className = "";
+      status.textContent = "";
+    }
+  }
+}
+
+function showTransportError(error) {
+  setBusy(false);
+  var message =
+    error && error.message
+      ? String(error.message)
+      : "SERVER_REQUEST_FAILED";
+  showError({ code: "SERVER_REQUEST_FAILED: " + message });
+}
 
 function newSessionId(prefix) {
   return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
@@ -172,6 +223,8 @@ function setMoney(today, pool) {
 }
 
 function load() {
+  setBusy(true, "正在載入學習資料…");
+
   google.script.run
     .withSuccessHandler(function(result) {
       if (!result || !result.ok) {
@@ -192,10 +245,9 @@ function load() {
       setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
       renderFlashcard();
       renderQuizQuestion();
+      setBusy(false);
     })
-    .withFailureHandler(function() {
-      showError({ code: "PERSISTENCE_FAILED" });
-    })
+    .withFailureHandler(showTransportError)
     .apiEnglishBootstrap();
 }
 
@@ -255,6 +307,8 @@ function renderFlashcard() {
 }
 
 function switchCard(delta) {
+  if (requestInFlight) return;
+
   tickFlashcard();
 
   if (!bootstrap) return;
@@ -278,11 +332,13 @@ function maybeCompleteFlashcards() {
   if (!complete) return;
 
   flashSubmitted = true;
+  setBusy(true, "正在儲存閃卡完成紀錄…");
 
   google.script.run
     .withSuccessHandler(function(result) {
       if (!result || !result.ok) {
         flashSubmitted = false;
+        setBusy(false);
         showError(result && result.error);
         return;
       }
@@ -296,10 +352,11 @@ function maybeCompleteFlashcards() {
           : "整課完成；零用金規則尚未設定，本次先記錄學習但不加錢。";
 
       setMoney(data.todayEnglishEarned, data.savingPool);
+      setBusy(false);
     })
-    .withFailureHandler(function() {
+    .withFailureHandler(function(error) {
       flashSubmitted = false;
-      showError({ code: "PERSISTENCE_FAILED" });
+      showTransportError(error);
     })
     .apiEnglishCompleteFlashcards({
       sessionId: flashSessionId,
@@ -366,6 +423,8 @@ function currentQuestion() {
 }
 
 function submitAnswer() {
+  if (requestInFlight) return;
+
   var question = currentQuestion();
   if (!question) return;
 
@@ -383,13 +442,12 @@ function submitAnswer() {
     input.answer = answerInput ? answerInput.value : "";
   }
 
-  document.getElementById("submit-answer").disabled = true;
+  setBusy(true, "正在判定並儲存作答…");
 
   google.script.run
     .withSuccessHandler(function(result) {
-      document.getElementById("submit-answer").disabled = false;
-
       if (!result || !result.ok) {
+        setBusy(false);
         showError(result && result.error);
         return;
       }
@@ -438,15 +496,15 @@ function submitAnswer() {
       }
 
       renderSummary();
+      setBusy(false);
     })
-    .withFailureHandler(function() {
-      document.getElementById("submit-answer").disabled = false;
-      showError({ code: "PERSISTENCE_FAILED" });
-    })
+    .withFailureHandler(showTransportError)
     .apiEnglishSubmitAnswer(input);
 }
 
 function continueQuestion() {
+  if (requestInFlight) return;
+
   var question = currentQuestion();
 
   if (question && !currentResolved) {
@@ -483,6 +541,8 @@ function escapeHtml(value) {
 }
 
 document.getElementById("start-flashcards").onclick = function() {
+  if (requestInFlight) return;
+
   flashSessionId = newSessionId("flash");
   flashExposure = {};
   flashIndex = 0;
@@ -493,6 +553,8 @@ document.getElementById("start-flashcards").onclick = function() {
 };
 
 document.getElementById("start-quiz").onclick = function() {
+  if (requestInFlight) return;
+
   quizSessionId = newSessionId("quiz");
   quizIndex = 0;
   firstTryCount = 0;
