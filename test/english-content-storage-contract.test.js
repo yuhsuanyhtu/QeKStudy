@@ -76,3 +76,9 @@ test('TDD-005-CONTENT-07 unapproved allowance amounts are not enabled in deploye
   assert.match(rewardConfig, /dailyCap:\s*null/);
   assert.match(rewardConfig, /flashcardLessonCompletion:\s*null/);
 });
+
+
+test('TDD-005-CONTENT-08 catalog URL is not a top-level const that can collide in Apps Script global scope', () => {
+  assert.doesNotMatch(logic, /const\s+QEK_ENGLISH_CATALOG_URL/);
+  assert.match(logic, /function\s+englishCatalogUrl_\s*\(/);
+});
