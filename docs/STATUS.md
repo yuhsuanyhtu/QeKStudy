@@ -37,7 +37,7 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop**
 
-SDD-005 已確認，現在正式進入 TDD-005 Red。
+SDD-005 已確認；TDD-005 已 Green。目前等待外部實作者（Codex / Claude）處理效能問題與後續 deployment / acceptance。
 
 目前決策：
 
@@ -55,7 +55,7 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · TDD GREEN · DEPLOYMENT PENDING` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` · TDD: `docs/tdd/TDD-005-english-learning-reward-loop.md` |
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · TDD GREEN · DEPLOYMENT PENDING` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` · TDD: `docs/tdd/TDD-005-english-learning-reward-loop.md` · Handoff: `docs/handoff/BDD-005-IMPLEMENTATION-HANDOFF.md` |
 
 ## Backlog / 待辦 Story
 
