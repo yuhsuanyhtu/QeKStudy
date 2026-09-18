@@ -89,3 +89,19 @@ test('TDD-005-CONTENT-09 Apps Script exposes a direct content fetch diagnostic',
   assert.match(logic, /responseCode/);
   assert.match(logic, /bodyStart/);
 });
+
+
+test('TDD-005-CONTENT-10 English catalog uses short server-side cache', () => {
+  assert.match(logic, /CacheService\.getScriptCache\(\)/);
+  assert.match(logic, /cache\.put\(cacheKey, body, 60\)/);
+});
+
+test('TDD-005-CONTENT-11 answer persistence reads history and writes event inside one script lock', () => {
+  const submitStart = logic.indexOf('function apiEnglishSubmitAnswer');
+  const flashStart = logic.indexOf('function apiEnglishCompleteFlashcards');
+  const submitBody = logic.slice(submitStart, flashStart);
+  assert.match(submitBody, /withScriptLock_\(function\(\)\s*\{/);
+  assert.match(submitBody, /listLearningEventsForStudent_/);
+  assert.match(submitBody, /appendLearningEvent_/);
+  assert.match(submitBody, /events\.concat\(\[event\]\)/);
+});
