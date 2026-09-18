@@ -56,3 +56,12 @@ test('TDD-005-CONTENT-05 browser cannot call a generic API that chooses rewardAm
     access(new URL('../apps-script/EnglishContent.gs', import.meta.url)),
   );
 });
+
+
+test('TDD-005-CONTENT-06 active quiz filters inactive revisions but server lookup keeps exact old revisions available', () => {
+  assert.match(logic, /function\s+activeEnglishQuestions_/);
+  assert.match(logic, /question\.active\s*!==\s*false/);
+  assert.match(logic, /function\s+findEnglishQuestionRevision_/);
+  assert.match(logic, /question\.questionId\s*===\s*questionId/);
+  assert.match(logic, /Number\(question\.revision\)\s*===\s*Number\(revision\)/);
+});
