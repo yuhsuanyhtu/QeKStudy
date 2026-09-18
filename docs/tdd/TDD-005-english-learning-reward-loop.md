@@ -151,3 +151,37 @@ Red 驗證成立後，才依序：
 TDD-005 Red adds 33 contracts covering flashcard exposure, answer evaluation, eligible mixed quizzes, attempt history, reward decay and daily caps, Google Sheets learning events, saving-pool reconstruction, controlled student binding, schema v3, and the English student UI.
 
 No learning implementation or database migration is performed during Red.
+
+
+---
+
+## 6. Actual Red Verification / 實際 Red 驗證
+
+GitHub Actions run: `35343824480`
+
+結果：
+
+- Total: **90**
+- Pass: **57**
+- Fail: **33**
+- Overall CI: **failure — expected RED**
+
+已確認：
+
+- BDD-001～BDD-003 原本 **57 個 regression 全部通過**。
+- 新增的 **33 個 BDD-005 contracts 全部失敗**。
+- 失敗原因都屬於尚未實作的 BDD-005 expectation：
+  - English.html 尚不存在；
+  - learning domain modules 尚不存在；
+  - learning-event service 尚不存在；
+  - Apps Script 仍是 schema v2；
+  - learning_events 尚不存在；
+  - controlled student binding 尚未實作；
+  - English route 尚未實作。
+
+因此目前是有效的 **TDD-005 Red**。
+
+下一步才能進 Implementation / Green。
+
+**English:**  
+The Red run is valid: all 57 existing regression tests remain green, while all 33 new BDD-005 contracts fail because the new behavior has not been implemented yet.
