@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QeKStudy English</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, sans-serif; color:#18212f; background:#f5f7fb; }
+    body { margin:0; }
+    main { width:min(760px, calc(100% - 28px)); margin:0 auto; padding:28px 0 64px; }
+    .panel { background:#fff; border:1px solid #e5e9f0; border-radius:16px; padding:18px; margin-top:16px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button,input { font:inherit; }
+    button { padding:10px 14px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; cursor:pointer; }
+    button.primary { background:#172033; color:white; border-color:#172033; }
+    .muted { color:#667085; }
+    .hidden { display:none; }
+    .stat { font-weight:700; }
+    .error { color:#b42318; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>QeKStudy · English</h1>
+  <p class="muted">受控單一學生版本。完整 Authentication 之後再接上。</p>
+
+  <section class="panel">
+    <div class="row">
+      <div class="stat">今日英文：<span id="today-earned">—</span></div>
+      <div class="stat">saving pool / 待領零用金：<span id="saving-pool">—</span></div>
+    </div>
+  </section>
+
+  <section class="panel" id="home">
+    <h2>今天要做什麼？</h2>
+    <div class="row">
+      <button id="start-flashcards" class="primary">單字閃卡</button>
+      <button id="start-quiz">中翻英測驗</button>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="flashcards">
+    <h2>單字閃卡</h2>
+    <p id="flashcard-word"></p>
+    <p id="flashcard-meaning" class="muted"></p>
+    <p>已看滿 1 秒：<span id="flashcard-progress">0 / 0</span></p>
+    <div class="row">
+      <button id="flashcard-prev">上一個</button>
+      <button id="flashcard-next">下一個</button>
+      <button id="flashcard-back">回首頁</button>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="quiz">
+    <h2>中翻英 / 測驗</h2>
+    <p id="question-text">題目</p>
+    <input id="answer-input" autocomplete="off">
+    <div class="row">
+      <button id="submit-answer" class="primary">送出</button>
+      <button id="retry-answer" class="hidden">再試一次</button>
+      <button id="continue-question" class="hidden">繼續下一題</button>
+    </div>
+    <p id="answer-result"></p>
+    <p id="review-target" class="muted">複習方向會顯示在這裡。</p>
+  </section>
+
+  <section class="panel" id="summary">
+    <h2>本輪結果</h2>
+    <p>第一次答對：<span id="first-try-count">0</span></p>
+    <p>重試後答對：<span id="retry-correct-count">0</span></p>
+    <p>還沒解決：<span id="unresolved-count">0</span></p>
+    <p>複習：<span id="review-summary">尚無</span></p>
+  </section>
+
+  <p id="status" role="status"></p>
+</main>
+<script>
+let bootstrap = null;
+let flashIndex = 0;
+let visibleStartedAt = null;
+
+function show(id) {
+  ['home','flashcards','quiz'].forEach(function(name) {
+    document.getElementById(name).classList.toggle('hidden', name !== id);
+  });
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('today-earned').textContent =
+        '$' + bootstrap.todayEnglishEarned + ' / $' + bootstrap.dailyCap;
+      document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+      renderFlashcard();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  document.getElementById('flashcard-progress').textContent = '0 / ' + words.length;
+  visibleStartedAt = performance.now();
+}
+
+function switchCard(delta) {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() { show('quiz'); };
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { show('home'); };
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('answer-input').focus();
+};
+document.getElementById('continue-question').onclick = function() {
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+};
+
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) visibleStartedAt = null;
+  else visibleStartedAt = performance.now();
+});
+
+load();
+</script>
+</body>
+</html>
