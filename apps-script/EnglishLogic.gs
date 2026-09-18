@@ -437,3 +437,59 @@ function apiEnglishContentDiagnostic() {
   console.log(JSON.stringify(result));
   return result;
 }
+
+
+function apiEnglishBootstrapDiagnostic() {
+  const report = {
+    schema: null,
+    controlledStudent: null,
+    learningEvents: null,
+    catalog: null,
+    rewardConfig: null,
+  };
+
+  try {
+    ensureSchema_();
+    report.schema = 'ok';
+
+    const student = controlledStudent_();
+    report.controlledStudent = {
+      ok: true,
+      studentId: student.studentId,
+      familyId: student.familyId,
+    };
+
+    const events = listLearningEventsForStudent_(student.studentId);
+    report.learningEvents = {
+      ok: true,
+      count: events.length,
+    };
+
+    const catalog = loadEnglishCatalog_();
+    report.catalog = {
+      ok: true,
+      catalogVersion: catalog.catalogVersion,
+      wordCount: catalog.lesson.words.length,
+      activeQuestionCount: activeEnglishQuestions_(catalog).length,
+    };
+
+    const config = getEnglishRewardConfig_();
+    report.rewardConfig = {
+      ok: true,
+      configured: config.configured === true,
+    };
+
+    report.ok = true;
+    console.log(JSON.stringify(report));
+    return report;
+  } catch (error) {
+    report.ok = false;
+    report.error = {
+      code: error && error.code ? error.code : 'INTERNAL_ERROR',
+      message: error && error.message ? error.message : String(error),
+      stack: error && error.stack ? String(error.stack) : '',
+    };
+    console.error(JSON.stringify(report));
+    return report;
+  }
+}
