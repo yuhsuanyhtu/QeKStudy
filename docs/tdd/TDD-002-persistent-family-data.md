@@ -1,6 +1,6 @@
 # TDD-002 — Persistent Family & Child Data
 
-狀態 Status: RED  
+狀態 Status: GREEN / REGRESSION PASSED / DEPLOYMENT PENDING  
 對應 BDD: BDD-002  
 對應 SDD: SDD-002  
 日期 Date: 2026-09-18
@@ -104,3 +104,20 @@ UI 必須：
 進入 Green 後，除了讓這 12 個新 contract 通過，BDD-001 原本 16 個測試也必須全部維持通過。
 
 BDD-001's existing 16 tests must remain green throughout BDD-002 implementation.
+
+
+## Green / Regression Result
+
+GitHub Actions regression 已完成：
+
+- Total tests: 28
+- Passed: 28
+- Failed: 0
+
+其中包含：
+- BDD-001 regression
+- BDD-002 persistent service tests
+- BDD-002 UI controller tests
+- Apps Script persistence contract test
+
+BDD-002 尚未標記 Done，因為仍需完成 Apps Script Web App deployment 與人工 UI acceptance。
