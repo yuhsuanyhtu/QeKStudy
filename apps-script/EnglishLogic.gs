@@ -78,6 +78,15 @@ function activeEnglishQuestions_(catalog) {
   });
 }
 
+function findEnglishQuestionRevision_(catalog, questionId, revision) {
+  return catalog.questions.find(function(question) {
+    return (
+      question.questionId === questionId &&
+      Number(question.revision) === Number(revision)
+    );
+  }) || null;
+}
+
 function publicEnglishQuestion_(question) {
   const result = {
     questionId: question.questionId,
@@ -236,13 +245,11 @@ function apiEnglishSubmitAnswer(input) {
 
     const student = controlledStudent_();
     const catalog = loadEnglishCatalog_();
-    const question = catalog.questions.find(function(item) {
-      return (
-        item.questionId === questionId &&
-        Number(item.revision) === revision &&
-        item.active !== false
-      );
-    });
+    const question = findEnglishQuestionRevision_(
+      catalog,
+      questionId,
+      revision
+    );
     if (!question) throw qekError_('CONTENT_NOT_AVAILABLE');
 
     const contentId = contentKey_(question.questionId, question.revision);
