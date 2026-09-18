@@ -15,27 +15,30 @@ Development follows **Agile + BDD + SDD + TDD + Regression**, one story at a tim
 QeKStudy 的方向不是單純「多做題」，而是讓學生：
 
 - 願意開始與持續練習
-- 逐步增加題量與挑戰
-- 答錯時知道應該回哪裡複習
-- 隨年級累積並整合以前學過的知識
-- 未來逐步加入會考型與跨單元題目
-- 讓家庭可以自行設定與管理零用金獎勵
+- 逐步增加題量與挑戰，但保留小而可完成的一輪
+- 以目前課堂進度為主，持續混入以前學過的知識
+- 依學生「已學過的知識」逐步加入可作答的會考考古題
+- 答錯時知道應該回哪裡複習，並由學生自己決定繼續、重試或回去複習
+- 保留第一次作答的事實，不因後來答對而假裝第一次就會
+- 把學習行為與家庭控制的零用金機制連結
 - 支援不同家庭、不同學生與不同科目
 
 QeKStudy is intended to help students:
 
 - start and continue practicing,
-- increase practice volume and challenge gradually,
-- know where to review after mistakes,
-- retain and integrate previously learned knowledge,
-- progressively practice exam-style and cross-unit questions,
-- connect effort with family-controlled allowance rewards,
+- increase practice volume and challenge while keeping rounds small and completable,
+- practice current classroom content while revisiting previously learned knowledge,
+- progressively include CAP past-exam questions whose prerequisite knowledge has already been learned,
+- receive actionable review directions after mistakes while keeping control over whether to continue, retry, or review,
+- preserve first-attempt truth even when a later retry succeeds,
+- connect learning activity with a family-controlled allowance mechanism,
 - and support multiple families, students, and subjects.
 
 更多背景請看：  
 See product background:
 
-`GptThinking/PRODUCT_ORIGIN.md`
+- `GptThinking/PRODUCT_ORIGIN.md`
+- `GptThinking/BDD-005_PRODUCT_DIRECTION.md`
 
 ---
 
@@ -189,11 +192,16 @@ Status: **Backlog — Deferred / Trigger-based**
 
 Status: **ACTIVE — BDD Draft**
 
-- 學生選科目與單元開始一組練習。
-- 每題記錄正確/錯誤。
-- 答錯時必須指向可追溯的知識點與複習方向。
-- 完成後顯示本次練習摘要與優先複習項目。
-- 先用少量人工 Demo 題目驗證學習價值。
+> 以下是目前產品討論方向；正式可驗收行為仍須回寫並確認 BDD 後才算定案。  
+> The following reflects current product direction; formal behavior is not final until the BDD is revised and accepted.
+
+- 第一個學習科目先從 **英文** 開始，原因是目前已有最強的真實學生與老師回饋訊號。
+- 一輪練習不只包含目前內容，也要逐步混入以前已學內容。
+- 會考考古題是否可出，應看該題所需知識是否都已學過，而不是只看年級標籤。
+- 第一版可人工挑選少量 Demo 題，不先做自動選題演算法。
+- 答錯時提供可追溯、可行動的複習方向；學生自己決定繼續、重試或回去複習。
+- 第一次作答結果要保留，後來答對不能把第一次錯誤洗掉。
+- **零用金屬於最小真實學習閉環的一部分，不是可任意拿掉的附加功能；實際規則仍待 BDD 討論。**
 
 ---
 
@@ -266,6 +274,7 @@ QeKStudy/
 │  └─ process/
 └─ GptThinking/
    ├─ PRODUCT_ORIGIN.md
+   ├─ BDD-005_PRODUCT_DIRECTION.md
    └─ session-2026-09-18.md
 ```
 
@@ -283,3 +292,7 @@ QeKStudy/
   Real usage, student feedback, parent observation, and teacher experience drive requirements.
 - 家庭是私人資料與零用金的主要邊界。  
   Family is the primary boundary for private data and allowance control.
+- 學習流程的控制權在學生；系統提供資訊與修正方向，不以答錯為理由強迫 remediation。  
+  The student controls the learning flow; the system provides information and a path to correction rather than forcing remediation.
+- 零用金是產品核心動機機制之一，但規則、核准與實際發放仍由家庭控制。  
+  Allowance is a core engagement mechanism, while rules, approval, and actual payout remain under family control.
