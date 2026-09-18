@@ -46,6 +46,7 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 - 學習與獎勵紀錄寫入 Google Sheet。
 - 每筆 learning event 都保留 family_id / student_id，資料邊界先設計乾淨。
 - 學習產生的獎勵累積進 saving pool。
+- 英文教材/題目 source of truth 放在 repo JSON；一般內容更新不需要重新部署 Apps Script。
 - 真正家長提領 / payout 仍是後續獨立 Story。
 
 ---
@@ -72,7 +73,7 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 | **BDD-002 — 家庭與孩子資料持久化** | `DONE` | Google Sheet / Apps Script durable persistence |
 | **BDD-003 — 名稱維護與管理員資料管理** | `DONE` | Parent rename, admin management domain, schema v2, audit log, soft delete safety boundary |
 
-Current automated regression: **90 / 90 PASS**. TDD-005 code is Green; Apps Script deployment and UI/Sheet acceptance remain pending.
+Current automated regression: **95 / 95 PASS**. TDD-005 code is Green; Apps Script deployment and UI/Sheet acceptance remain pending.
 
 ---
 
