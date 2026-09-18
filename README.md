@@ -147,9 +147,9 @@ Current design:
 ### BDD-003 — 名稱維護與管理員資料管理
 ### Rename & Admin Data Management
 
-狀態：**BDD / SDD Approved — TDD Red**
+狀態：**Green — Regression 57/57 PASS / Deployment pending**
 
-Status: **BDD / SDD Approved — TDD Red**
+Status: **Green — Regression 57/57 PASS / Deployment pending**
 
 - 家長可修改自己家庭與孩子的顯示名稱。
 - 管理員可協助修改任何家庭與孩子的顯示名稱。
