@@ -2,6 +2,9 @@
 # QeKStudy BDD-004
 # 中文：使用者登入與角色辨識
 # English: User authentication and role recognition
+# Status: DEFERRED / TRIGGER-BASED BACKLOG
+# Deferred reason: prioritize controlled demo learning-value validation before full authentication.
+# Pickup triggers are tracked in docs/STATUS.md.
 
 功能: 使用者登入與角色辨識
   為了讓家庭資料與管理員功能只被正確的人使用
