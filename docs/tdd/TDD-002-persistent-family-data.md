@@ -1,6 +1,6 @@
 # TDD-002 — Persistent Family & Child Data
 
-狀態 Status: GREEN / REGRESSION 28/28 PASSED / UI ACCEPTANCE PENDING  
+狀態 Status: DONE / REGRESSION 28/28 PASSED  
 對應 BDD: BDD-002  
 對應 SDD: SDD-002  
 日期 Date: 2026-09-18
@@ -120,4 +120,4 @@ GitHub Actions regression 已完成：
 - BDD-002 UI controller tests
 - Apps Script persistence contract test
 
-BDD-002 尚未標記 Done，Apps Script Web App 已部署；仍需完成人工 UI acceptance。
+Apps Script Web App 已部署，人工 UI acceptance 已通過；BDD-002 Done。
