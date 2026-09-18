@@ -1,7 +1,7 @@
 # TDD-005 — 英文最小學習與獎勵閉環
 # English Minimum Learning & Reward Loop
 
-狀態 Status: **GREEN — 97/97 PASS；尚未完成部署驗收 / deployment acceptance pending**  
+狀態 Status: **GREEN — 99/99 PASS；尚未完成部署驗收 / deployment acceptance pending**  
 對應 BDD: **BDD-005 APPROVED**  
 對應 SDD: **SDD-005 APPROVED**  
 日期 Date: **2026-09-18**
@@ -297,3 +297,15 @@ Verification run: `35347222085`
 - UI 清楚顯示「零用金規則尚未設定」
 
 Verification run: `35347546883` — **97/97 PASS**
+
+
+### HTML integrity follow-up
+
+首次手動部署驗收時，Apps Script 回報 `HTML 內容格式錯誤`。原因是 repo 內 `English.html` 在一次文字替換時被破壞，出現重複 HTML 與截斷 JavaScript。
+
+修正後新增兩個 UI contracts：
+
+- HTML 文件只能有一份完整 html/script，且 `</html>` 後不得有重複內容。
+- inline JavaScript 必須能被 JavaScript parser 正常解析。
+
+Verification run: `35354662017` — **99/99 PASS**
