@@ -188,11 +188,11 @@ Status: **Backlog — Deferred / Trigger-based**
 ### BDD-005 — 英文最小學習與獎勵閉環
 ### English Minimum Learning & Reward Loop
 
-狀態：**ACTIVE — BDD Approved**
+狀態：**ACTIVE — SDD Draft**
 
-Status: **ACTIVE — BDD Approved**
+Status: **ACTIVE — SDD Draft**
 
-BDD-005 已確認。下一步依 Agile 流程進入 **SDD-005**；目前尚未開始設計或 coding。
+BDD-005 已確認，**SDD-005 已建立 Draft 並等待確認**。目前尚未進 TDD 或 coding。
 
 - 第一科固定從 **英文** 開始。
 - 第一版至少包含單字閃卡與一種真正可判定答對/答錯的測驗。
@@ -202,6 +202,7 @@ BDD-005 已確認。下一步依 Agile 流程進入 **SDD-005**；目前尚未�
 - 第一次作答結果必須保留，後來答對不能把第一次錯誤洗掉。
 - 零用金是核心機制：可依困難程度給不同基礎點數、已掌握內容重複複習時獎勵遞減、每科每日有頂標；達頂標後仍可繼續學習。
 - 本 BDD 不指定實際金額，也不做自動選題、完整題庫或正式多家庭學習紀錄。
+- SDD-005：`docs/sdd/SDD-005-english-learning-reward-loop.md`
 
 ---
 
