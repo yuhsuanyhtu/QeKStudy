@@ -1,4 +1,4 @@
-# SDD-001 — 家庭與孩子綁定 / Family–Child Binding
+# SDD-001 — 家庭可見性、家庭與孩子綁定 / Family Visibility & Child Binding
 
 狀態 Status: Draft for TDD  
 對應需求 Requirement: BDD-001  
@@ -6,25 +6,27 @@
 
 ## 1. 目的 / Purpose
 
-本設計只處理 BDD-001：建立家庭、將建立者設為該家庭的管理家長、在家庭內建立孩子，以及阻止跨家庭管理。
+本設計只處理 BDD-001：建立家庭、將建立者設為該家庭的管理家長、讓家長只能看到自己被授權的家庭群組、在自己的家庭內建立孩子，以及阻止任何跨家庭存取或修改。
 
-This design covers only BDD-001: creating a family, making the creator its managing parent, creating a child inside that family, and preventing cross-family management.
+This design covers only BDD-001: creating a family, making the creator its managing parent, limiting family visibility to authorized families, creating a child inside an authorized family, and preventing all cross-family access or modification.
 
 ---
 
 ## 2. 範圍 / Scope
 
-本 Story 需要支援三個行為：
+本 Story 需要支援四個行為：
 
 1. 已登入的家長建立家庭。
-2. 該家庭的管理家長在家庭內建立孩子。
-3. 家長不能修改其他家庭孩子的家庭設定。
+2. 家長查看家庭群組時，只能取得自己被授權的家庭。
+3. 管理家長可在自己的家庭內建立孩子。
+4. 家長不能讀取或操作其他家庭及其孩子的家庭資料。
 
-This story supports exactly three behaviors:
+This story supports exactly four behaviors:
 
 1. An authenticated parent creates a family.
-2. The managing parent creates a child inside that family.
-3. A parent cannot modify family settings for a child in another family.
+2. A parent can list only families they are authorized to access.
+3. A managing parent can create a child inside their own family.
+4. A parent cannot read or operate on another family's private data.
 
 ---
 
@@ -68,28 +70,13 @@ Represents a parent whose identity has already been authenticated by the surroun
 
 - `parentId`：系統內唯一識別碼
 
-Required information:
-
-- `parentId`: unique internal identifier
-
-> SDD-001 假設「家長已登入」，但不定義如何登入。
->
-> SDD-001 assumes the parent is authenticated but does not define how.
-
 ### Family / 家庭
 
-家庭是 QeKStudy 的私人資料邊界。
+家庭是 QeKStudy 的私人資料與授權邊界。
 
-A Family is the privacy boundary for household-owned QeKStudy data.
+A Family is the privacy and authorization boundary for household-owned QeKStudy data.
 
 必要資訊：
-
-- `familyId`：唯一識別碼
-- `displayName`：家庭顯示名稱
-- `createdByParentId`：建立此家庭的家長
-- `createdAt`：建立時間
-
-Required information:
 
 - `familyId`
 - `displayName`
@@ -98,148 +85,187 @@ Required information:
 
 ### FamilyParentMembership / 家庭家長關係
 
-表示某位家長是否有權管理某個家庭。
+表示某位家長被授權存取哪個家庭，以及在該家庭具備的角色。
 
-Represents whether a parent is authorized to manage a family.
+Represents which family a parent is authorized to access and the parent's role within that family.
 
-BDD-001 只需要產生一筆關係：
+BDD-001 只需要：
 
 - 家庭建立者
 - role = `MANAGING_PARENT`
 
-BDD-001 creates only one membership:
+此 relation 同時決定：
 
-- the family creator
-- role = `MANAGING_PARENT`
+- 家庭是否對此家長可見
+- 此家長是否可執行管理操作
 
-此 relation 保留未來擴充可能，但本 Story 不提供新增第二位家長的行為。
-
-The relation allows future extension, but this story exposes no behavior for adding a second parent.
+For BDD-001, the creator receives `MANAGING_PARENT`, which determines both visibility and management authority.
 
 ### Student / 學生
 
-代表 QeKStudy 中的學生身分。
-
-Represents a student identity in QeKStudy.
-
 必要資訊：
-
-- `studentId`：唯一識別碼
-- `familyId`：所屬家庭
-- `displayName`：學生顯示名稱
-- `createdAt`：建立時間
-
-Required information:
 
 - `studentId`
 - `familyId`
 - `displayName`
 - `createdAt`
 
-BDD-001 的 invariant：
+Invariant：
 
 > 每一個由本 Story 建立的 Student 必須且只能屬於一個 Family。
 
-Invariant for BDD-001:
-
-> Every Student created by this story belongs to exactly one Family.
-
-這不代表永久禁止未來的監護或家庭轉移功能；只是 SDD-001 不提供該行為。
-
-This does not permanently forbid future guardianship or transfer features; they are simply outside SDD-001.
-
 ---
 
-## 5. Commands / 系統操作
+## 5. Queries & Commands / 查詢與操作
 
 ### 5.1 CreateFamily
 
-輸入 Input:
+輸入：
 
 - `actorParentId`
 - `displayName`
 
-前置條件 Preconditions:
+前置條件：
 
 - `actorParentId` 已通過 Authentication
-- `displayName` 經 trim 後不可為空
+- `displayName` trim 後不可為空
 
-行為 Behavior:
+行為：
 
-1. 建立新的 `Family`
+1. 建立 `Family`
 2. `createdByParentId = actorParentId`
 3. 建立 `FamilyParentMembership(actorParentId, familyId, MANAGING_PARENT)`
 
-輸出 Output:
+輸出：
 
 - `familyId`
 
-### 5.2 AddChildToFamily
+結果：
 
-輸入 Input:
+新家庭立即成為此家長的「可見家庭」。
+
+The new family immediately becomes visible to the creating parent.
+
+### 5.2 ListVisibleFamilies
+
+輸入：
+
+- `actorParentId`
+
+行為：
+
+1. 取得此家長的家庭 membership
+2. 只回傳 membership 所指向的 Family
+3. 不回傳任何未授權 Family 的名稱、成員、識別資訊或私人資料
+
+輸出：
+
+- `VisibleFamily[]`
+
+核心規則：
+
+> Family visibility 必須在資料查詢層就被過濾，而不是先取得所有 Family 再由 UI 隱藏。
+
+Core rule:
+
+> Family visibility must be filtered at the authorization/query boundary, not by fetching all families and hiding them in the UI.
+
+### 5.3 AddChildToFamily
+
+輸入：
 
 - `actorParentId`
 - `familyId`
 - `childDisplayName`
 
-前置條件 Preconditions:
+前置條件：
 
-- 家庭存在
-- `actorParentId` 是此家庭的 `MANAGING_PARENT`
-- `childDisplayName` 經 trim 後不可為空
+- 指定 Family 對 actor 可見且 actor 具 `MANAGING_PARENT` 權限
+- `childDisplayName` trim 後不可為空
 
-行為 Behavior:
+行為：
 
 1. 建立 `Student`
 2. `Student.familyId = familyId`
 
-輸出 Output:
+輸出：
 
 - `studentId`
 
-### 5.3 UpdateChildFamilySettings
+### 5.4 ReadFamilyPrivateData
 
-此 command 在 BDD-001 中只需要定義授權邊界，不需要定義具體有哪些設定欄位。
+代表所有家庭私人資料讀取行為的共同授權規則。
 
-For BDD-001, this command exists only to define the authorization boundary; specific settings are not defined yet.
+Represents the common authorization rule for all family-private reads.
 
-輸入 Input:
+輸入：
+
+- `actorParentId`
+- `familyId`
+
+規則：
+
+- 只有具有該 Family membership 的家長可讀取
+- 未授權時不得回傳家庭名稱、成員、孩子或其他私人資料
+
+### 5.5 UpdateChildFamilySettings
+
+此 command 只定義授權邊界，不定義具體設定欄位。
+
+輸入：
 
 - `actorParentId`
 - `studentId`
 - `changes`
 
-授權 Authorization:
+授權：
 
-1. 找到 Student
-2. 取得 `student.familyId`
-3. 驗證 `actorParentId` 是否為該 Family 的 `MANAGING_PARENT`
-4. 若不是，拒絕整個操作
-5. 拒絕時不可寫入任何 Student 或 Family 資料
+1. 找到 Student 所屬 `familyId`
+2. 驗證該 Family 是否屬於 actor 可見且可管理範圍
+3. 若否，拒絕整個操作
+4. 拒絕時不可寫入任何 Student 或 Family 資料
 
 ---
 
-## 6. Authorization Rule / 授權規則
+## 6. Authorization & Visibility Rules / 授權與可見性規則
 
-唯一的核心規則：
+### Rule A — 可見家庭
 
-> 家長能管理 Student，當且僅當該家長具有 Student 所屬 Family 的管理權。
+> 家長只能看到自己具有 Family membership 的家庭。
 
-Core rule:
+> A parent can see only families for which they have a Family membership.
 
-> A parent may manage a Student if and only if that parent has managing authority for the Student's Family.
+### Rule B — 管理家庭
+
+> 家長只有具備該 Family 的 `MANAGING_PARENT` 權限時，才能執行家庭管理操作。
+
+> A parent may perform family-management operations only when they hold `MANAGING_PARENT` authority for that Family.
+
+### Rule C — 孩子權限沿用家庭邊界
+
+> 家長能讀取或管理 Student，必須先通過 Student 所屬 Family 的授權。
+
+> Access to a Student inherits authorization from the Student's Family.
 
 概念函式：
 
 ```text
+visibleFamilies(parentId)
+  return families joined through FamilyParentMembership(parentId)
+
+canManageFamily(parentId, familyId)
+  return membership(parentId, familyId).role == MANAGING_PARENT
+
 canManageStudent(parentId, studentId)
   student = findStudent(studentId)
-  return hasManagingMembership(parentId, student.familyId)
+  return canManageFamily(parentId, student.familyId)
 ```
 
-所有家庭私有資料的存取都應先通過 Family boundary 驗證。
+### Rule D — 不可利用 ID 繞過
 
-All access to family-private data must pass the Family boundary authorization check first.
+即使家長知道或猜到其他 `familyId` / `studentId`，仍必須套用相同授權檢查。
+
+Knowing or guessing another `familyId` or `studentId` must never bypass authorization.
 
 ---
 
@@ -249,67 +275,54 @@ All access to family-private data must pass the Family boundary authorization ch
 
 家庭名稱為空白時拒絕建立。
 
-Reject family creation when the display name is blank.
-
 ### EMPTY_CHILD_NAME
 
 孩子名稱為空白時拒絕建立。
 
-Reject child creation when the display name is blank.
+### RESOURCE_NOT_AVAILABLE
 
-### FAMILY_NOT_FOUND
+當 Family / Student 不存在，或存在但 actor 無權存取時，對外不得揭露其私人資料。
 
-指定家庭不存在。
+When a Family/Student does not exist or exists but the actor is unauthorized, no private data may be revealed.
 
-The requested family does not exist.
+實作可在內部區分 not-found 與 access-denied，但對外行為不得讓未授權家長取得其他家庭資料。
 
-### FAMILY_ACCESS_DENIED
-
-家長沒有該家庭的管理權。
-
-The parent does not have managing authority for that family.
-
-### STUDENT_NOT_FOUND
-
-指定學生不存在。
-
-The requested student does not exist.
+The implementation may distinguish not-found and access-denied internally, but external behavior must not expose another family's private information.
 
 重要 invariant：
 
-> Authorization 失敗時必須是 atomic failure：不得留下部分修改。
-
-Important invariant:
-
-> Authorization failure must be atomic: no partial mutation may remain.
+> Authorization 失敗時必須 atomic：不得留下任何部分資料修改。
 
 ---
 
 ## 8. BDD → SDD Traceability / 需求追溯
 
-### BDD Scenario 1：家長建立新家庭
-
-由以下設計滿足：
+### Scenario 1：家長建立新家庭
 
 - `CreateFamily`
-- `Family`
 - `FamilyParentMembership`
 - 建立者自動成為 `MANAGING_PARENT`
+- 新家庭進入 `ListVisibleFamilies`
 
-### BDD Scenario 2：家長在自己的家庭建立孩子
+### Scenario 2：家長只看得到自己的家庭群組
 
-由以下設計滿足：
+- `ListVisibleFamilies`
+- Rule A
+- 查詢層權限過濾
+- 未授權家庭 metadata 不回傳
+
+### Scenario 3：家長在自己的家庭建立孩子
 
 - `AddChildToFamily`
 - `Student.familyId`
-- `MANAGING_PARENT` authorization
+- Rule B
 
-### BDD Scenario 3：不得管理其他家庭的孩子
+### Scenario 4：家長不得操作其他家庭
 
-由以下設計滿足：
-
-- `canManageStudent`
-- `FAMILY_ACCESS_DENIED`
+- `ReadFamilyPrivateData`
+- `UpdateChildFamilySettings`
+- Rule C / Rule D
+- `RESOURCE_NOT_AVAILABLE`
 - atomic no-mutation rule
 
 ---
@@ -319,32 +332,33 @@ Important invariant:
 TDD-001 至少需要覆蓋：
 
 1. 建立家庭後，建立者具有管理權。
-2. 家長可以在自己的家庭建立孩子。
-3. 建立的孩子只屬於指定家庭。
-4. 家長不能在沒有管理權的家庭建立孩子。
-5. 家長不能修改另一家庭孩子的設定。
-6. 被拒絕的跨家庭修改不能留下任何資料變更。
-7. 空白家庭名稱被拒絕。
-8. 空白孩子名稱被拒絕。
-
-TDD-001 must cover at least the same eight behaviors above.
+2. 新建立的家庭會出現在建立者的可見家庭清單。
+3. 家長的家庭清單不包含其他家庭。
+4. 家庭清單不洩漏其他家庭的名稱、成員或資料。
+5. 家長可以在自己的家庭建立孩子。
+6. 建立的孩子只屬於指定家庭。
+7. 家長不能在沒有管理權的家庭建立孩子。
+8. 家長不能讀取其他家庭的私人資料。
+9. 家長不能修改另一家庭孩子的設定。
+10. 即使直接提供其他家庭或學生 ID，仍不能繞過授權。
+11. 被拒絕的跨家庭修改不能留下任何資料變更。
+12. 空白家庭名稱被拒絕。
+13. 空白孩子名稱被拒絕。
 
 ---
 
 ## 10. Design Decision / 設計決策
 
-本 SDD 將「家庭」定義為資料與權限的主要邊界，而不是「班級」。
+本 SDD 將「家庭」定義為資料、可見性與管理權的主要邊界，而不是「班級」。
 
-This SDD defines the Family, not the Class, as the primary privacy and authorization boundary.
+This SDD defines the Family, not the Class, as the primary boundary for privacy, visibility, and management authority.
 
 因此未來即使 QeK 與同學加入同一班級：
 
-- 可以共享班級學習內容
-- 不代表彼此家長可以讀取或修改家庭私人資料
-- 零用金資料仍可保持家庭隔離
+- 家長登入後只看到自己的家庭群組
+- 班級可以共享學習內容
+- 家長不能因此看到其他學生的家庭群組
+- 家長不能對其他家庭做任何家庭層級操作
+- 零用金與其他家庭私人設定仍保持隔離
 
-Therefore, even when QeK and classmates later share one class:
-
-- learning content may be shared,
-- family-private data remains isolated,
-- allowance data can remain household-specific.
+Therefore, future class membership may share learning content, but it will not grant visibility into or control over another family's private group or settings.
