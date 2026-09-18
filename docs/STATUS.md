@@ -35,13 +35,16 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 目前唯一 ACTIVE Story：
 
-**BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop**
+**BDD-004 — 使用者登入、學生身分與角色辨識 / Authentication, Learner Identity & Role Recognition**
 
-BDD-005 behavior is approved. SDD-005 is now drafted and awaiting review; TDD has not started.
+BDD-005 新增了兩個正式需求：
 
-`English → flashcard/practice → current + prior + eligible CAP content → review target → reward summary`
+- 學習與獎勵紀錄要寫入 Google Sheet。
+- 零用金要能由被授權家長確認發放並留下紀錄。
 
-BDD-004 Authentication 維持 `DEFERRED · TRIGGER-BASED`。
+這兩項已觸發原本 BDD-004 的 pickup trigger，因此 BDD-004 重新進入 review。
+
+BDD-005 暫停在 SDD Draft，等 BDD-004 重新確認後再繼續。
 
 ---
 
@@ -49,25 +52,13 @@ BDD-004 Authentication 維持 `DEFERRED · TRIGGER-BASED`。
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · SDD DRAFT` | 驗證英文閃卡接觸、真正測驗、目前/舊知識統整、符合已學範圍的會考題、錯題自主修正，以及難度/重複遞減/每日頂標的零用金獎勵。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
+| **BDD-004 — 使用者登入、學生身分與角色辨識 / Authentication, Learner Identity & Role Recognition** | `ACTIVE · BDD RE-REVIEW DRAFT` | 重新確認 PARENT / STUDENT / ADMIN 身分與權限，確保真實學習紀錄、獎勵與零用金發放只能由正確的人讀寫。 | `docs/bdd/BDD-004-authentication-role-recognition.feature` |
 
 ## Backlog / 待辦 Story
 
 | Story | Status | Why deferred / 為什麼現在不做 | Pickup Trigger / 何時撿回 | Existing spec |
 |---|---|---|---|---|
-| **BDD-004 — 使用者登入與角色辨識 / Authentication & Role Recognition** | `DEFERRED · TRIGGER-BASED` | 目前先維持受控 single-family / demo 模式，優先驗證學習價值。完整 Authentication 現在會增加工程完整性，但不直接增加學生第一次試用的學習價值。 | 任一成立就重新評估：① 第二個真實家庭開始使用；② 班上其他家長要自行輸入真實資料；③ 要保存真實姓名、學習紀錄或獎勵資料；④ 要公開 Admin 修改/刪除 UI；⑤ 系統從受控 Demo 轉成可讓外部使用者自行加入的 pilot。 | `docs/bdd/BDD-004-authentication-role-recognition.feature` |
-
-### BDD-004 Safety Boundary While Deferred / 延後期間安全邊界
-
-在 BDD-004 撿回以前：
-
-- Apps Script 身分切換仍是 **Demo identity，不是登入**。
-- 不應把公開 URL 當 production multi-family security boundary。
-- Public UI 不開放 administrator destructive operations。
-- Demo 應使用測試資料；若進入真實多家庭 / 真實學生資料，就觸發 BDD-004。
-- 不新增「半套登入」來製造已安全的錯覺。
-
----
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `DEFERRED` | 需求已改為要保存真實學習/獎勵到 Google Sheet，並支援家長確認零用金發放；在身份與權限未重新確認前不能安全進 TDD。 | BDD-004 重新確認並完成必要設計後，先重新 review BDD-005，再重寫 SDD-005。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD draft: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
 
 ## Done / 已完成
 
