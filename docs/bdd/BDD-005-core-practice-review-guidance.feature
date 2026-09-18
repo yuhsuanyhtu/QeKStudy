@@ -12,8 +12,9 @@
 #
 # 2026-09-18 requirement change:
 # - learning and reward records must be persisted to Google Sheets;
-# - allowance must support parent-confirmed payout, not points-only demo behavior.
-# These changes trigger BDD-004 re-review before BDD-005 can continue to TDD.
+# - learning rewards accumulate into a saving pool;
+# - actual payout is a separate parent-page flow and is not part of BDD-005.
+# Persisting real learning/reward records triggers BDD-004 re-review before BDD-005 can continue to TDD.
 
 功能: 英文最小學習與獎勵閉環
   為了讓學生願意每天練英文，並且記得現在和以前學過的內容
@@ -137,10 +138,17 @@
 #
 # 5. 零用金是 BDD-005 的核心，不是附加功能。
 #    已確認的原則是：
-#    - 困難程度不同，可以有不同點數；
-#    - 已經會的內容重複做，點數遞減；
+#    - 困難程度不同，可以有不同獎勵；
+#    - 已經會的內容重複做，獎勵遞減；
 #    - 每科每天各自有獎勵上限；
-#    - 到達上限後仍然可以繼續學習。
+#    - 到達上限後仍然可以繼續學習；
+#    - 學習時產生的獎勵累積進 saving pool；
+#    - 每次學習與獎勵事件要寫入 Google Sheet。
+#
+# 6. 真正的零用金發放不在 BDD-005。
+#    發放是另一個家長頁流程：
+#    saving pool → 家長操作提領 → 扣除 saving pool → Google Sheet 記錄 payout。
+#    TeenageStudyTool 目前採每次 $100 為單位，QeKStudy 是否沿用由後續家長發放 Story 確認。
 #
 # 6. 這一版 BDD 不決定實際金額。
 #    實際每一種活動多少點、重試拿多少，確認後再進設計。
@@ -148,7 +156,7 @@
 # 7. 學生可以決定要不要重試、要不要複習、要不要繼續。
 #    但學生不能自己改獎勵規則、作答結果或家庭資料。
 #
-# 8. 第一版先人工準備少量題目，不做：
+# 9. 第一版先人工準備少量題目，不做：
 #    - AI 自動出題；
 #    - 自動難度調整；
 #    - 自動搜尋所有適合的會考題；
@@ -157,11 +165,11 @@
 #    - streak；
 #    - 正式多家庭使用。
 #
-# 9. 題目與教材只使用可以合法使用、可以追溯來源的內容。
+# 10. 題目與教材只使用可以合法使用、可以追溯來源的內容。
 #    課本、參考書與學習網站可以拿來了解學習範圍，
 #    但不代表可以直接複製其受版權保護的內容。
 #
-# 10. BDD-005 完成時一定要有學生真的可以操作的 UI。
+# 11. BDD-005 完成時一定要有學生真的可以操作的 UI。
 #
 # English summary:
 # BDD-005 is the first small English learning loop in QeKStudy.
