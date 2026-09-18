@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { font-family: system-ui, -apple-system, sans-serif; background:#f5f7fb; color:#18212f; }
+    body { margin:0; }
+    main { width:min(760px, calc(100% - 28px)); margin:0 auto; padding:32px 0 64px; }
+    .warning { background:#fff4e5; border:1px solid #ffd59a; padding:12px 14px; border-radius:12px; font-weight:700; }
+    .panel { background:white; border:1px solid #e5e9f0; border-radius:16px; padding:18px; margin-top:16px; }
+    button,input { font:inherit; }
+    button { padding:10px 14px; border:1px solid #ccd3dd; border-radius:10px; background:#fff; cursor:pointer; }
+    button.active, button.primary { background:#172033; color:white; border-color:#172033; }
+    input { width:100%; padding:10px 12px; border:1px solid #ccd3dd; border-radius:10px; box-sizing:border-box; }
+    form { display:grid; gap:10px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .family { border-top:1px solid #edf0f4; padding:12px 0; }
+    .muted { color:#667085; }
+    .status { min-height:24px; font-weight:700; }
+    .error { color:#b42318; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>QeKStudy · Persistence Demo</h1>
+  <p class="warning">DEMO DATA — 不要輸入真實學生、家庭或零用金資料。</p>
+
+  <section class="panel">
+    <p>模擬登入身份（只用於 BDD-002 驗收）</p>
+    <div class="row">
+      <button id="parent-a" class="active" onclick="switchParent('parent-a')">家長 A</button>
+      <button id="parent-b" onclick="switchParent('parent-b')">家長 B</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>建立家庭</h2>
+    <form onsubmit="createFamily(event)">
+      <input id="family-name" placeholder="例如：Demo Family A">
+      <button class="primary" type="submit">永久儲存家庭</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>我的家庭</h2>
+    <div id="families" class="muted">載入中…</div>
+  </section>
+
+  <p id="status" class="status"></p>
+</main>
+
+<script>
+let currentParent = 'parent-a';
+
+function setStatus(message, error) {
+  const el = document.getElementById('status');
+  el.textContent = message;
+  el.classList.toggle('error', Boolean(error));
+}
+
+function setButtons() {
+  ['parent-a', 'parent-b'].forEach(function(id) {
+    document.getElementById(id).classList.toggle('active', id === currentParent);
+  });
+}
+
+function switchParent(parentId) {
+  currentParent = parentId;
+  setButtons();
+  setStatus('已切換身份，重新從 Google Sheet 載入。', false);
+  loadFamilies();
+}
+
+function loadFamilies() {
+  document.getElementById('families').textContent = '載入中…';
+  google.script.run
+    .withSuccessHandler(renderBootstrap)
+    .withFailureHandler(function() {
+      setStatus('無法連線到持久化服務。', true);
+    })
+    .apiBootstrap(currentParent);
+}
+
+function renderBootstrap(result) {
+  if (!result || !result.ok) {
+    showError(result && result.error);
+    return;
+  }
+
+  const root = document.getElementById('families');
+  root.innerHTML = '';
+
+  if (!result.data.families.length) {
+    root.textContent = '目前沒有家庭。';
+    root.className = 'muted';
+    return;
+  }
+
+  result.data.families.forEach(function(family) {
+    const block = document.createElement('div');
+    block.className = 'family';
+
+    const title = document.createElement('strong');
+    title.textContent = family.displayName;
+    block.appendChild(title);
+
+    const list = document.createElement('div');
+    list.className = 'muted';
+    list.textContent = family.students.length
+      ? '孩子：' + family.students.map(function(student) { return student.displayName; }).join('、')
+      : '尚未新增孩子';
+    block.appendChild(list);
+
+    const form = document.createElement('form');
+    form.style.marginTop = '10px';
+
+    const input = document.createElement('input');
+    input.placeholder = '孩子顯示名稱（Demo）';
+
+    const button = document.createElement('button');
+    button.type = 'submit';
+    button.textContent = '永久儲存孩子';
+
+    form.appendChild(input);
+    form.appendChild(button);
+    form.onsubmit = function(event) {
+      event.preventDefault();
+      addStudent(family.familyId, input.value);
+    };
+
+    block.appendChild(form);
+    root.appendChild(block);
+  });
+}
+
+function createFamily(event) {
+  event.preventDefault();
+  const input = document.getElementById('family-name');
+  setStatus('儲存中…', false);
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.ok) return showError(result.error);
+      input.value = '';
+      setStatus('家庭已永久儲存。重新整理後仍會存在。', false);
+      loadFamilies();
+    })
+    .withFailureHandler(function() {
+      setStatus('永久儲存失敗，資料沒有被標記為成功。', true);
+    })
+    .apiCreateFamily(currentParent, input.value);
+}
+
+function addStudent(familyId, displayName) {
+  setStatus('儲存中…', false);
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.ok) return showError(result.error);
+      setStatus('孩子已永久儲存。', false);
+      loadFamilies();
+    })
+    .withFailureHandler(function() {
+      setStatus('永久儲存失敗，資料沒有被標記為成功。', true);
+    })
+    .apiAddStudent(currentParent, familyId, displayName);
+}
+
+function showError(error) {
+  const code = error && error.code ? error.code : 'PERSISTENCE_FAILED';
+  const messages = {
+    EMPTY_FAMILY_NAME: '請輸入家庭名稱。',
+    EMPTY_CHILD_NAME: '請輸入孩子名稱。',
+    RESOURCE_NOT_AVAILABLE: '你沒有權限存取這個家庭。',
+    PERSISTENCE_BUSY: '目前多人同時操作，請再試一次。',
+    SCHEMA_MISMATCH: '資料庫版本不相容。',
+    PERSISTENCE_FAILED: '永久儲存失敗，請再試一次。'
+  };
+  setStatus(messages[code] || messages.PERSISTENCE_FAILED, true);
+}
+
+loadFamilies();
+</script>
+</body>
+</html>
