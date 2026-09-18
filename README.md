@@ -74,6 +74,10 @@ Full workflow:
 
 `docs/process/AGILE_WORKFLOW.md`
 
+Story 看板 / Story status board:
+
+`docs/STATUS.md`
+
 ---
 
 ## 目前進度 / Current Status
@@ -167,15 +171,16 @@ Status: **Done — Regression 57/57 PASS**
 ### BDD-004 — 使用者登入與角色辨識
 ### Authentication & Role Recognition
 
-狀態：**BDD Draft — 待確認**
+狀態：**Backlog — Deferred / Trigger-based**
 
-Status: **BDD Draft — pending approval**
+Status: **Backlog — Deferred / Trigger-based**
 
 - 未登入不能讀寫家庭私人資料。
 - 已登記帳號登入後，server-side 決定 PARENT / ADMIN。
 - Browser 不能靠傳入 role / parentId 冒用身份。
 - 未登記帳號不會被自動賦予家庭或管理員權限。
 - 登出後私人操作立即失效。
+- 本 Story 暫緩；撿回條件請看 `docs/STATUS.md`。
 
 ---
 
