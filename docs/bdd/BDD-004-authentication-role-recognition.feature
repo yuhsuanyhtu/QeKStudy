@@ -2,7 +2,7 @@
 # QeKStudy BDD-004
 # 中文：使用者登入、學生身分與角色辨識
 # English: Authentication, learner identity, and role recognition
-# Status: ACTIVE / BDD RE-REVIEW DRAFT
+# Status: ACTIVE / BDD APPROVED
 #
 # 2026-09-18 重新撿回原因：
 # BDD-005 已確認要把真實學習紀錄與學習產生的零用金獎勵寫入 Google Sheet。
