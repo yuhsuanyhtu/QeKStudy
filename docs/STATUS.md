@@ -35,11 +35,11 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 目前唯一 ACTIVE Story：
 
-**BDD-005 — 核心練習與錯題複習指引 / Core Practice & Wrong-answer Review Guidance**
+**BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop**
 
 Current active work is the first directly testable learning loop:
 
-`subject/unit → practice → answer → review target → summary`
+`English → flashcard/practice → current + prior + eligible CAP content → review target → reward summary`
 
 BDD-004 Authentication 維持 `DEFERRED · TRIGGER-BASED`。
 
@@ -49,7 +49,7 @@ BDD-004 Authentication 維持 `DEFERRED · TRIGGER-BASED`。
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-005 — 核心練習與錯題複習指引 / Core Practice & Wrong-answer Review Guidance** | `ACTIVE · BDD DRAFT` | 驗證學生能完成「選科目/單元 → 作答 → 答錯得到複習位置 → 完成摘要」的最小學習迴圈。 | `docs/bdd/BDD-005-core-practice-review-guidance.feature` |
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · BDD DRAFT` | 驗證英文閃卡接觸、真正測驗、目前/舊知識統整、符合已學範圍的會考題、錯題自主修正，以及難度/重複遞減/每日頂標的零用金獎勵。 | `docs/bdd/BDD-005-core-practice-review-guidance.feature` |
 
 ## Backlog / 待辦 Story
 
