@@ -213,7 +213,8 @@ function apiEnglishBootstrap() {
       catalogVersion: catalog.catalogVersion,
       savingPool: calculateSavingPool_(events),
       todayEnglishEarned: calculateDailySubjectEarned_(events, 'ENGLISH', today),
-      dailyCap: config.dailyCap,
+      rewardConfigured: config.configured === true,
+      dailyCap: config.configured === true ? config.dailyCap : null,
       lesson: {
         lessonId: catalog.lesson.lessonId,
         revision: catalog.lesson.revision,
@@ -262,8 +263,12 @@ function apiEnglishSubmitAnswer(input) {
       : correct;
 
     let rewardAmount = 0;
-    if (correct && !currentSessionAlreadyRewarded_(events, contentId, sessionId)) {
-      const config = getEnglishRewardConfig_();
+    const config = getEnglishRewardConfig_();
+    if (
+      correct &&
+      config.configured === true &&
+      !currentSessionAlreadyRewarded_(events, contentId, sessionId)
+    ) {
       const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
       const todayEarned = calculateDailySubjectEarned_(events, 'ENGLISH', today);
       const previousSuccessCount = previousSuccessfulContentCount_(
@@ -313,6 +318,7 @@ function apiEnglishSubmitAnswer(input) {
       firstAttemptCorrect: firstAttemptCorrect,
       rewardAmount: rewardAmount,
       reviewTarget: correct ? '' : question.reviewTarget,
+      rewardConfigured: config.configured === true,
       savingPool: calculateSavingPool_(updatedEvents),
       todayEnglishEarned: calculateDailySubjectEarned_(
         updatedEvents,
@@ -360,12 +366,13 @@ function apiEnglishCompleteFlashcards(input) {
     const config = getEnglishRewardConfig_();
     const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
     const todayEarned = calculateDailySubjectEarned_(events, 'ENGLISH', today);
-    const rewardAmount = alreadyRewarded
-      ? 0
-      : Math.min(
-          Math.max(0, Number(config.flashcardLessonCompletion) || 0),
-          Math.max(0, Number(config.dailyCap) - todayEarned)
-        );
+    const rewardAmount =
+      alreadyRewarded || config.configured !== true
+        ? 0
+        : Math.min(
+            Math.max(0, Number(config.flashcardLessonCompletion) || 0),
+            Math.max(0, Number(config.dailyCap) - todayEarned)
+          );
 
     if (!alreadyRewarded) {
       const event = {
@@ -398,6 +405,7 @@ function apiEnglishCompleteFlashcards(input) {
     return {
       complete: true,
       rewardAmount: rewardAmount,
+      rewardConfigured: config.configured === true,
       savingPool: calculateSavingPool_(updatedEvents),
       todayEnglishEarned: calculateDailySubjectEarned_(
         updatedEvents,
