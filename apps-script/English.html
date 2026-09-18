@@ -113,7 +113,2650 @@ function setMoney(today, pool) {
   if (today != null) bootstrap.todayEnglishEarned = today;
   if (pool != null) bootstrap.savingPool = pool;
   document.getElementById('today-earned').textContent =
-    '$' + bootstrap.todayEnglishEarned + ' / $' + bootstrap.dailyCap;
+    '
+  document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('catalog-version').textContent = bootstrap.catalogVersion;
+      if (!bootstrap.rewardConfigured) {
+        document.getElementById('status').className = 'muted';
+        document.getElementById('status').textContent =
+          '目前先測學習與紀錄流程；正式零用金金額尚未確認，因此不會加錢。';
+      }
+      setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
+      renderFlashcard();
+      renderQuizQuestion();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function tickFlashcard() {
+  if (!bootstrap || document.hidden || document.getElementById('flashcards').classList.contains('hidden')) {
+    flashLastTick = null;
+    return;
+  }
+  const now = performance.now();
+  if (flashLastTick == null) {
+    flashLastTick = now;
+    return;
+  }
+  const word = bootstrap.lesson.words[flashIndex];
+  const delta = Math.max(0, now - flashLastTick);
+  flashExposure[word.wordId] = (flashExposure[word.wordId] || 0) + delta;
+  flashLastTick = now;
+  renderFlashProgress();
+  maybeCompleteFlashcards();
+}
+
+function renderFlashProgress() {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  const qualified = words.filter(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  }).length;
+  document.getElementById('flashcard-progress').textContent = qualified + ' / ' + words.length;
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  renderFlashProgress();
+  flashLastTick = performance.now();
+}
+
+function switchCard(delta) {
+  tickFlashcard();
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function maybeCompleteFlashcards() {
+  if (!bootstrap || flashSubmitted) return;
+  const words = bootstrap.lesson.words || [];
+  const complete = words.length > 0 && words.every(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  });
+  if (!complete) return;
+
+  flashSubmitted = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) {
+        flashSubmitted = false;
+        return showError(result && result.error);
+      }
+      const data = result.data;
+      document.getElementById('flashcard-result').className = 'ok';
+      document.getElementById('flashcard-result').textContent =
+        data.rewardConfigured
+          ? ('整課完成，本次 +
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          data.rewardConfigured
+            ? ('答對了，本題 +
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + bootstrap.todayEnglishEarned + ' / ' +
+    (bootstrap.rewardConfigured ? ('
+  document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('catalog-version').textContent = bootstrap.catalogVersion;
+      setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
+      renderFlashcard();
+      renderQuizQuestion();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function tickFlashcard() {
+  if (!bootstrap || document.hidden || document.getElementById('flashcards').classList.contains('hidden')) {
+    flashLastTick = null;
+    return;
+  }
+  const now = performance.now();
+  if (flashLastTick == null) {
+    flashLastTick = now;
+    return;
+  }
+  const word = bootstrap.lesson.words[flashIndex];
+  const delta = Math.max(0, now - flashLastTick);
+  flashExposure[word.wordId] = (flashExposure[word.wordId] || 0) + delta;
+  flashLastTick = now;
+  renderFlashProgress();
+  maybeCompleteFlashcards();
+}
+
+function renderFlashProgress() {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  const qualified = words.filter(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  }).length;
+  document.getElementById('flashcard-progress').textContent = qualified + ' / ' + words.length;
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  renderFlashProgress();
+  flashLastTick = performance.now();
+}
+
+function switchCard(delta) {
+  tickFlashcard();
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function maybeCompleteFlashcards() {
+  if (!bootstrap || flashSubmitted) return;
+  const words = bootstrap.lesson.words || [];
+  const complete = words.length > 0 && words.every(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  });
+  if (!complete) return;
+
+  flashSubmitted = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) {
+        flashSubmitted = false;
+        return showError(result && result.error);
+      }
+      const data = result.data;
+      document.getElementById('flashcard-result').className = 'ok';
+      document.getElementById('flashcard-result').textContent =
+        '整課完成，本次 +$' + data.rewardAmount;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + bootstrap.dailyCap) : '獎勵尚未設定');
+  document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('catalog-version').textContent = bootstrap.catalogVersion;
+      setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
+      renderFlashcard();
+      renderQuizQuestion();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function tickFlashcard() {
+  if (!bootstrap || document.hidden || document.getElementById('flashcards').classList.contains('hidden')) {
+    flashLastTick = null;
+    return;
+  }
+  const now = performance.now();
+  if (flashLastTick == null) {
+    flashLastTick = now;
+    return;
+  }
+  const word = bootstrap.lesson.words[flashIndex];
+  const delta = Math.max(0, now - flashLastTick);
+  flashExposure[word.wordId] = (flashExposure[word.wordId] || 0) + delta;
+  flashLastTick = now;
+  renderFlashProgress();
+  maybeCompleteFlashcards();
+}
+
+function renderFlashProgress() {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  const qualified = words.filter(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  }).length;
+  document.getElementById('flashcard-progress').textContent = qualified + ' / ' + words.length;
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  renderFlashProgress();
+  flashLastTick = performance.now();
+}
+
+function switchCard(delta) {
+  tickFlashcard();
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function maybeCompleteFlashcards() {
+  if (!bootstrap || flashSubmitted) return;
+  const words = bootstrap.lesson.words || [];
+  const complete = words.length > 0 && words.every(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  });
+  if (!complete) return;
+
+  flashSubmitted = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) {
+        flashSubmitted = false;
+        return showError(result && result.error);
+      }
+      const data = result.data;
+      document.getElementById('flashcard-result').className = 'ok';
+      document.getElementById('flashcard-result').textContent =
+        '整課完成，本次 +$' + data.rewardAmount;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + data.rewardAmount)
+          : '整課完成；零用金規則尚未設定，本次先記錄學習但不加錢。';
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + bootstrap.todayEnglishEarned + ' / ' +
+    (bootstrap.rewardConfigured ? ('
+  document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('catalog-version').textContent = bootstrap.catalogVersion;
+      setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
+      renderFlashcard();
+      renderQuizQuestion();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function tickFlashcard() {
+  if (!bootstrap || document.hidden || document.getElementById('flashcards').classList.contains('hidden')) {
+    flashLastTick = null;
+    return;
+  }
+  const now = performance.now();
+  if (flashLastTick == null) {
+    flashLastTick = now;
+    return;
+  }
+  const word = bootstrap.lesson.words[flashIndex];
+  const delta = Math.max(0, now - flashLastTick);
+  flashExposure[word.wordId] = (flashExposure[word.wordId] || 0) + delta;
+  flashLastTick = now;
+  renderFlashProgress();
+  maybeCompleteFlashcards();
+}
+
+function renderFlashProgress() {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  const qualified = words.filter(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  }).length;
+  document.getElementById('flashcard-progress').textContent = qualified + ' / ' + words.length;
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  renderFlashProgress();
+  flashLastTick = performance.now();
+}
+
+function switchCard(delta) {
+  tickFlashcard();
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function maybeCompleteFlashcards() {
+  if (!bootstrap || flashSubmitted) return;
+  const words = bootstrap.lesson.words || [];
+  const complete = words.length > 0 && words.every(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  });
+  if (!complete) return;
+
+  flashSubmitted = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) {
+        flashSubmitted = false;
+        return showError(result && result.error);
+      }
+      const data = result.data;
+      document.getElementById('flashcard-result').className = 'ok';
+      document.getElementById('flashcard-result').textContent =
+        '整課完成，本次 +$' + data.rewardAmount;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + bootstrap.dailyCap) : '獎勵尚未設定');
+  document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('catalog-version').textContent = bootstrap.catalogVersion;
+      setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
+      renderFlashcard();
+      renderQuizQuestion();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function tickFlashcard() {
+  if (!bootstrap || document.hidden || document.getElementById('flashcards').classList.contains('hidden')) {
+    flashLastTick = null;
+    return;
+  }
+  const now = performance.now();
+  if (flashLastTick == null) {
+    flashLastTick = now;
+    return;
+  }
+  const word = bootstrap.lesson.words[flashIndex];
+  const delta = Math.max(0, now - flashLastTick);
+  flashExposure[word.wordId] = (flashExposure[word.wordId] || 0) + delta;
+  flashLastTick = now;
+  renderFlashProgress();
+  maybeCompleteFlashcards();
+}
+
+function renderFlashProgress() {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  const qualified = words.filter(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  }).length;
+  document.getElementById('flashcard-progress').textContent = qualified + ' / ' + words.length;
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  renderFlashProgress();
+  flashLastTick = performance.now();
+}
+
+function switchCard(delta) {
+  tickFlashcard();
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function maybeCompleteFlashcards() {
+  if (!bootstrap || flashSubmitted) return;
+  const words = bootstrap.lesson.words || [];
+  const complete = words.length > 0 && words.every(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  });
+  if (!complete) return;
+
+  flashSubmitted = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) {
+        flashSubmitted = false;
+        return showError(result && result.error);
+      }
+      const data = result.data;
+      document.getElementById('flashcard-result').className = 'ok';
+      document.getElementById('flashcard-result').textContent =
+        '整課完成，本次 +$' + data.rewardAmount;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + data.rewardAmount)
+            : '答對了；零用金規則尚未設定，本題先記錄但不加錢。';
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + bootstrap.todayEnglishEarned + ' / ' +
+    (bootstrap.rewardConfigured ? ('
+  document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('catalog-version').textContent = bootstrap.catalogVersion;
+      setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
+      renderFlashcard();
+      renderQuizQuestion();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function tickFlashcard() {
+  if (!bootstrap || document.hidden || document.getElementById('flashcards').classList.contains('hidden')) {
+    flashLastTick = null;
+    return;
+  }
+  const now = performance.now();
+  if (flashLastTick == null) {
+    flashLastTick = now;
+    return;
+  }
+  const word = bootstrap.lesson.words[flashIndex];
+  const delta = Math.max(0, now - flashLastTick);
+  flashExposure[word.wordId] = (flashExposure[word.wordId] || 0) + delta;
+  flashLastTick = now;
+  renderFlashProgress();
+  maybeCompleteFlashcards();
+}
+
+function renderFlashProgress() {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  const qualified = words.filter(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  }).length;
+  document.getElementById('flashcard-progress').textContent = qualified + ' / ' + words.length;
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  renderFlashProgress();
+  flashLastTick = performance.now();
+}
+
+function switchCard(delta) {
+  tickFlashcard();
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function maybeCompleteFlashcards() {
+  if (!bootstrap || flashSubmitted) return;
+  const words = bootstrap.lesson.words || [];
+  const complete = words.length > 0 && words.every(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  });
+  if (!complete) return;
+
+  flashSubmitted = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) {
+        flashSubmitted = false;
+        return showError(result && result.error);
+      }
+      const data = result.data;
+      document.getElementById('flashcard-result').className = 'ok';
+      document.getElementById('flashcard-result').textContent =
+        '整課完成，本次 +$' + data.rewardAmount;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + bootstrap.dailyCap) : '獎勵尚未設定');
+  document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('catalog-version').textContent = bootstrap.catalogVersion;
+      setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
+      renderFlashcard();
+      renderQuizQuestion();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function tickFlashcard() {
+  if (!bootstrap || document.hidden || document.getElementById('flashcards').classList.contains('hidden')) {
+    flashLastTick = null;
+    return;
+  }
+  const now = performance.now();
+  if (flashLastTick == null) {
+    flashLastTick = now;
+    return;
+  }
+  const word = bootstrap.lesson.words[flashIndex];
+  const delta = Math.max(0, now - flashLastTick);
+  flashExposure[word.wordId] = (flashExposure[word.wordId] || 0) + delta;
+  flashLastTick = now;
+  renderFlashProgress();
+  maybeCompleteFlashcards();
+}
+
+function renderFlashProgress() {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  const qualified = words.filter(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  }).length;
+  document.getElementById('flashcard-progress').textContent = qualified + ' / ' + words.length;
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  renderFlashProgress();
+  flashLastTick = performance.now();
+}
+
+function switchCard(delta) {
+  tickFlashcard();
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function maybeCompleteFlashcards() {
+  if (!bootstrap || flashSubmitted) return;
+  const words = bootstrap.lesson.words || [];
+  const complete = words.length > 0 && words.every(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  });
+  if (!complete) return;
+
+  flashSubmitted = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) {
+        flashSubmitted = false;
+        return showError(result && result.error);
+      }
+      const data = result.data;
+      document.getElementById('flashcard-result').className = 'ok';
+      document.getElementById('flashcard-result').textContent =
+        '整課完成，本次 +$' + data.rewardAmount;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + data.rewardAmount)
+          : '整課完成；零用金規則尚未設定，本次先記錄學習但不加錢。';
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + bootstrap.todayEnglishEarned + ' / ' +
+    (bootstrap.rewardConfigured ? ('
+  document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
+}
+
+function load() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) return showError(result && result.error);
+      bootstrap = result.data;
+      document.getElementById('catalog-version').textContent = bootstrap.catalogVersion;
+      setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
+      renderFlashcard();
+      renderQuizQuestion();
+    })
+    .withFailureHandler(function() { showError({ code:'PERSISTENCE_FAILED' }); })
+    .apiEnglishBootstrap();
+}
+
+function tickFlashcard() {
+  if (!bootstrap || document.hidden || document.getElementById('flashcards').classList.contains('hidden')) {
+    flashLastTick = null;
+    return;
+  }
+  const now = performance.now();
+  if (flashLastTick == null) {
+    flashLastTick = now;
+    return;
+  }
+  const word = bootstrap.lesson.words[flashIndex];
+  const delta = Math.max(0, now - flashLastTick);
+  flashExposure[word.wordId] = (flashExposure[word.wordId] || 0) + delta;
+  flashLastTick = now;
+  renderFlashProgress();
+  maybeCompleteFlashcards();
+}
+
+function renderFlashProgress() {
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  const qualified = words.filter(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  }).length;
+  document.getElementById('flashcard-progress').textContent = qualified + ' / ' + words.length;
+}
+
+function renderFlashcard() {
+  if (!bootstrap || !bootstrap.lesson) return;
+  const words = bootstrap.lesson.words || [];
+  if (!words.length) return;
+  const word = words[flashIndex];
+  document.getElementById('flashcard-word').textContent = word.english;
+  document.getElementById('flashcard-meaning').textContent = word.chinese;
+  renderFlashProgress();
+  flashLastTick = performance.now();
+}
+
+function switchCard(delta) {
+  tickFlashcard();
+  if (!bootstrap) return;
+  const words = bootstrap.lesson.words || [];
+  flashIndex = (flashIndex + delta + words.length) % words.length;
+  renderFlashcard();
+}
+
+function maybeCompleteFlashcards() {
+  if (!bootstrap || flashSubmitted) return;
+  const words = bootstrap.lesson.words || [];
+  const complete = words.length > 0 && words.every(function(word) {
+    return Number(flashExposure[word.wordId] || 0) >= 1000;
+  });
+  if (!complete) return;
+
+  flashSubmitted = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result || !result.ok) {
+        flashSubmitted = false;
+        return showError(result && result.error);
+      }
+      const data = result.data;
+      document.getElementById('flashcard-result').className = 'ok';
+      document.getElementById('flashcard-result').textContent =
+        '整課完成，本次 +$' + data.rewardAmount;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+    })
+    .withFailureHandler(function() {
+      flashSubmitted = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishCompleteFlashcards({
+      sessionId: flashSessionId,
+      lessonId: bootstrap.lesson.lessonId,
+      revision: bootstrap.lesson.revision,
+      exposureByWordId: flashExposure
+    });
+}
+
+function renderQuizQuestion() {
+  if (!bootstrap) return;
+  const quiz = bootstrap.quiz || [];
+  const q = quiz[quizIndex];
+  if (!q) {
+    document.getElementById('question-kind').textContent = '';
+    document.getElementById('question-text').textContent = '這一輪完成了';
+    document.getElementById('answer-area').innerHTML = '';
+    document.getElementById('submit-answer').classList.add('hidden');
+    document.getElementById('retry-answer').classList.add('hidden');
+    document.getElementById('continue-question').classList.add('hidden');
+    return;
+  }
+
+  currentResolved = false;
+  document.getElementById('question-kind').textContent =
+    q.sourceType + ' · ' + q.kind;
+  document.getElementById('question-text').textContent = q.prompt;
+  document.getElementById('answer-result').textContent = '';
+  document.getElementById('review-target').textContent = '複習方向會顯示在這裡。';
+  document.getElementById('submit-answer').classList.remove('hidden');
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+
+  const area = document.getElementById('answer-area');
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    area.innerHTML = (q.choices || []).map(function(choice) {
+      return '<label style="display:block;margin:8px 0"><input type="radio" name="choice" value="' +
+        escapeHtml(choice.choiceId) + '"> ' + escapeHtml(choice.label) + '</label>';
+    }).join('');
+  } else {
+    area.innerHTML = '<input id="answer-input" autocomplete="off" placeholder="輸入英文答案">';
+  }
+}
+
+function currentQuestion() {
+  return bootstrap && bootstrap.quiz ? bootstrap.quiz[quizIndex] : null;
+}
+
+function submitAnswer() {
+  const q = currentQuestion();
+  if (!q) return;
+
+  const input = {
+    sessionId: quizSessionId,
+    questionId: q.questionId,
+    revision: q.revision
+  };
+
+  if (q.kind === 'MULTIPLE_CHOICE') {
+    const selected = document.querySelector('input[name="choice"]:checked');
+    input.selectedChoiceId = selected ? selected.value : '';
+  } else {
+    const el = document.getElementById('answer-input');
+    input.answer = el ? el.value : '';
+  }
+
+  document.getElementById('submit-answer').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(result) {
+      document.getElementById('submit-answer').disabled = false;
+      if (!result || !result.ok) return showError(result && result.error);
+      const data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+
+      if (data.correct) {
+        currentResolved = true;
+        document.getElementById('answer-result').className = 'ok';
+        document.getElementById('answer-result').textContent =
+          '答對了，本題 +$' + data.rewardAmount;
+        document.getElementById('review-target').textContent = '';
+        if (data.attemptNo === 1) firstTryCount += 1;
+        else retryCorrectCount += 1;
+        document.getElementById('submit-answer').classList.add('hidden');
+        document.getElementById('retry-answer').classList.add('hidden');
+        document.getElementById('continue-question').textContent = '下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+      } else {
+        document.getElementById('answer-result').className = 'error';
+        document.getElementById('answer-result').textContent = '這次答錯了';
+        document.getElementById('review-target').textContent =
+          '複習：' + (data.reviewTarget || '請回到對應內容確認');
+        document.getElementById('retry-answer').classList.remove('hidden');
+        document.getElementById('continue-question').textContent = '繼續下一題';
+        document.getElementById('continue-question').classList.remove('hidden');
+        if (data.reviewTarget && !reviewItems.includes(data.reviewTarget)) {
+          reviewItems.push(data.reviewTarget);
+        }
+      }
+      renderSummary();
+    })
+    .withFailureHandler(function() {
+      document.getElementById('submit-answer').disabled = false;
+      showError({ code:'PERSISTENCE_FAILED' });
+    })
+    .apiEnglishSubmitAnswer(input);
+}
+
+function continueQuestion() {
+  const q = currentQuestion();
+  if (q && !currentResolved) unresolvedCount += 1;
+  quizIndex += 1;
+  renderSummary();
+  renderQuizQuestion();
+}
+
+function renderSummary() {
+  document.getElementById('first-try-count').textContent = firstTryCount;
+  document.getElementById('retry-correct-count').textContent = retryCorrectCount;
+  document.getElementById('unresolved-count').textContent = unresolvedCount;
+  document.getElementById('review-summary').textContent =
+    reviewItems.length ? reviewItems.join('；') : '尚無';
+}
+
+function showError(error) {
+  const el = document.getElementById('status');
+  el.className = 'error';
+  el.textContent = (error && error.code) || '無法載入資料';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('start-flashcards').onclick = function() {
+  flashSessionId = newSessionId('flash');
+  flashExposure = {};
+  flashIndex = 0;
+  flashSubmitted = false;
+  show('flashcards');
+  renderFlashcard();
+};
+document.getElementById('start-quiz').onclick = function() {
+  quizSessionId = newSessionId('quiz');
+  quizIndex = 0;
+  firstTryCount = 0;
+  retryCorrectCount = 0;
+  unresolvedCount = 0;
+  reviewItems = [];
+  renderSummary();
+  show('quiz');
+  renderQuizQuestion();
+};
+document.getElementById('flashcard-prev').onclick = function() { switchCard(-1); };
+document.getElementById('flashcard-next').onclick = function() { switchCard(1); };
+document.getElementById('flashcard-back').onclick = function() { tickFlashcard(); show('home'); };
+document.getElementById('submit-answer').onclick = submitAnswer;
+document.getElementById('retry-answer').onclick = function() {
+  document.getElementById('retry-answer').classList.add('hidden');
+  document.getElementById('continue-question').classList.add('hidden');
+  const input = document.getElementById('answer-input');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+};
+document.getElementById('continue-question').onclick = continueQuestion;
+document.getElementById('quiz-back').onclick = function() { show('home'); };
+
+document.addEventListener('visibilitychange', function() {
+  flashLastTick = document.hidden ? null : performance.now();
+});
+setInterval(tickFlashcard, 200);
+
+load();
+</script>
+</body>
+</html>
+ + bootstrap.dailyCap) : '獎勵尚未設定');
   document.getElementById('saving-pool').textContent = '$' + bootstrap.savingPool;
 }
 
