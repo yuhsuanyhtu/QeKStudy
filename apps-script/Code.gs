@@ -434,9 +434,12 @@ function appendRow_(sheetName, values) {
 
 function withScriptLock_(work) {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) {
+  try {
+    lock.waitLock(10000);
+  } catch (error) {
     throw qekError_('PERSISTENCE_BUSY');
   }
+
   try {
     return work();
   } finally {
