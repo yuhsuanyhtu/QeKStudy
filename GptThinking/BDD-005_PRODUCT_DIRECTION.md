@@ -484,3 +484,26 @@ It should combine current curriculum, previously learned knowledge, and manually
 Allowance is a core part of the product's engagement loop, not a detachable future feature. Student autonomy governs learning choices; family authority governs money.
 
 The first version should remain small and manually curated. The exact round composition, review UI, and allowance formula are still product questions and must be resolved in BDD discussion before SDD.
+
+
+## 16. 2026-09-18 晚間需求變更 / Requirement Change
+
+使用者重新確認 BDD-005 的三個關鍵設計：
+
+1. **第一個一般測驗維持中翻英。**
+2. **獎勵不能只停在 Demo points；要進入真正的家庭零用金流程。**
+   - 學習產生待領零用金。
+   - 被授權家長確認已實際發給孩子。
+   - 系統留下已發放紀錄。
+   - 這仍然是家庭獎勵機制，不是銀行轉帳或支付平台。
+3. **學習紀錄與獎勵紀錄要寫入 Google Sheet。**
+   - 不再接受只存在 localStorage 的正式方案。
+
+這兩項 persistence / payout 需求直接觸發 BDD-004 原先的 pickup condition。
+
+因此目前 Agile 狀態改為：
+
+`BDD-004 re-review → 確認學生/家長/管理員身份與權限 → 再回 BDD-005 → 重寫 SDD-005`
+
+另外，重新 review BDD-004 時發現舊版只有 PARENT / ADMIN，已不足以支援真實學生學習紀錄，所以新 BDD-004 Draft 增加 STUDENT 身分與學生資料隔離。
+
