@@ -1,67 +1,55 @@
 # TDD-001 — Family Visibility & Child Binding
 
-狀態 Status: RED  
+狀態 Status: GREEN / REGRESSION PASSED  
 對應 BDD: BDD-001  
 對應 SDD: SDD-001  
 日期 Date: 2026-09-18
 
 ## 測試策略 / Test Strategy
 
-使用 Node.js 內建 `node:test` 與 `node:assert`。
+使用 Node.js 內建 `node:test` 與 `node:assert`，不加入第三方測試套件。
 
-Uses Node.js built-in `node:test` and `node:assert`.
+Uses Node.js built-in `node:test` and `node:assert`, with no third-party test dependency.
 
-不加入第三方測試框架或套件，避免在目前階段增加不必要依賴。
+## Red → Green
 
-No third-party testing framework or dependency is introduced at this stage.
+Red 階段先建立 13 個測試，當時 `src/family-domain.js` 尚不存在。
 
-## Red Phase
+In the Red phase, 13 tests were created before `src/family-domain.js` existed.
 
-目前測試刻意指向尚未存在的：
+Green 階段新增最小實作 `src/family-domain.js`，只實作 BDD-001 / SDD-001 所要求的家庭邊界行為。
 
-`src/family-domain.js`
+The Green phase adds the minimal `src/family-domain.js` implementation required by BDD-001 / SDD-001.
 
-因此執行：
+## Test Result / 測試結果
+
+執行：
 
 `npm test`
 
-必須失敗。這是 TDD 的 Red 狀態，不代表 regression failure。
+結果：
 
-The tests intentionally reference the not-yet-implemented `src/family-domain.js`, so `npm test` must currently fail. This is the expected TDD Red phase.
+- Tests: 13
+- Passed: 13
+- Failed: 0
+- Skipped: 0
 
-## Contract Under Test / 待實作介面
+Regression 再次執行相同完整測試集，結果仍為 13/13 通過。
 
-預期 module 匯出：
+The full regression suite was run again and remained 13/13 passing.
 
-`createFamilyDomain()`
-
-回傳物件至少提供：
-
-- `createFamily({ actorParentId, displayName })`
-- `listVisibleFamilies({ actorParentId })`
-- `canManageFamily(parentId, familyId)`
-- `addChildToFamily({ actorParentId, familyId, childDisplayName })`
-- `readFamilyPrivateData({ actorParentId, familyId })`
-- `updateChildFamilySettings({ actorParentId, studentId, changes })`
-
-## 13 個測試 / 13 Tests
+## 覆蓋項目 / Covered Behaviors
 
 1. 建立家庭後，建立者具有管理權。
-2. 新建立的家庭會出現在建立者的可見家庭清單。
-3. 家長的家庭清單不包含其他家庭。
-4. 家庭清單不洩漏其他家庭名稱、成員或資料。
-5. 家長可以在自己的家庭建立孩子。
-6. 建立的孩子只屬於指定家庭。
-7. 家長不能在沒有管理權的家庭建立孩子。
-8. 家長不能讀取其他家庭私人資料。
-9. 家長不能修改另一家庭孩子設定。
-10. 知道其他 familyId/studentId 也不能繞過授權。
-11. 被拒絕的跨家庭修改不能留下任何資料變更。
+2. 新建立家庭出現在建立者的可見家庭清單。
+3. 家長家庭清單不包含其他家庭。
+4. 不洩漏其他家庭名稱、成員或資料。
+5. 家長可在自己的家庭建立孩子。
+6. 孩子只屬於指定家庭。
+7. 不得在未授權家庭建立孩子。
+8. 不得讀取其他家庭私人資料。
+9. 不得修改其他家庭孩子設定。
+10. familyId / studentId 不可繞過授權。
+11. 被拒絕的跨家庭修改不得留下資料變更。
 12. 空白家庭名稱被拒絕。
 13. 空白孩子名稱被拒絕。
-
-## 下一步 / Next Step
-
-只有在確認 Red 測試確實失敗後，才進入 Implementation / Green。
-
-Implementation begins only after the Red state is confirmed.
