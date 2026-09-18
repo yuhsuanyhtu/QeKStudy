@@ -37,6 +37,8 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop**
 
+SDD-005 已確認，現在正式進入 TDD-005 Red。
+
 目前決策：
 
 - BDD-004 已重新 review 過，但完整 Authentication 仍刻意延後。
@@ -52,7 +54,7 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · SDD DRAFT` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · TDD RED` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
 
 ## Backlog / 待辦 Story
 
