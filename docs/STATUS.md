@@ -33,13 +33,23 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 ## Current / 現在
 
-目前沒有新的 Story 被正式指定為 `ACTIVE`。
+目前唯一 ACTIVE Story：
 
-Current direction: 下一個 Story 優先從**使用者可直接感受到的學習價值**選擇，而不是先做完整 Authentication infrastructure。
+**BDD-005 — 核心練習與錯題複習指引 / Core Practice & Wrong-answer Review Guidance**
 
-The next Story should prioritize directly testable learning value before full authentication infrastructure.
+Current active work is the first directly testable learning loop:
+
+`subject/unit → practice → answer → review target → summary`
+
+BDD-004 Authentication 維持 `DEFERRED · TRIGGER-BASED`。
 
 ---
+
+## Active / 進行中
+
+| Story | Status | Goal / 目標 | Spec |
+|---|---|---|---|
+| **BDD-005 — 核心練習與錯題複習指引 / Core Practice & Wrong-answer Review Guidance** | `ACTIVE · BDD DRAFT` | 驗證學生能完成「選科目/單元 → 作答 → 答錯得到複習位置 → 完成摘要」的最小學習迴圈。 | `docs/bdd/BDD-005-core-practice-review-guidance.feature` |
 
 ## Backlog / 待辦 Story
 

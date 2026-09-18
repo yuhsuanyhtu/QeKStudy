@@ -182,6 +182,19 @@ Status: **Backlog — Deferred / Trigger-based**
 - 登出後私人操作立即失效。
 - 本 Story 暫緩；撿回條件請看 `docs/STATUS.md`。
 
+### BDD-005 — 核心練習與錯題複習指引
+### Core Practice & Wrong-answer Review Guidance
+
+狀態：**ACTIVE — BDD Draft**
+
+Status: **ACTIVE — BDD Draft**
+
+- 學生選科目與單元開始一組練習。
+- 每題記錄正確/錯誤。
+- 答錯時必須指向可追溯的知識點與複習方向。
+- 完成後顯示本次練習摘要與優先複習項目。
+- 先用少量人工 Demo 題目驗證學習價值。
+
 ---
 
 ## Demo / 驗收畫面
