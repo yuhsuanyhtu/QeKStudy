@@ -1,10 +1,11 @@
-const QEK_ENGLISH_CATALOG_URL =
-  'https://raw.githubusercontent.com/yuhsuanyhtu/QeKStudy/main/data/english/catalog.json';
+function englishCatalogUrl_() {
+  return 'https://raw.githubusercontent.com/yuhsuanyhtu/QeKStudy/main/data/english/catalog.json';
+}
 
 function loadEnglishCatalog_() {
   let response;
   try {
-    response = UrlFetchApp.fetch(QEK_ENGLISH_CATALOG_URL, {
+    response = UrlFetchApp.fetch(englishCatalogUrl_(), {
       muteHttpExceptions: true,
       headers: { 'Cache-Control': 'no-cache' },
     });
