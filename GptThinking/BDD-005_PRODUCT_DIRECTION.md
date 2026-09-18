@@ -491,13 +491,15 @@ The first version should remain small and manually curated. The exact round comp
 使用者重新確認 BDD-005 的三個關鍵設計：
 
 1. **第一個一般測驗維持中翻英。**
-2. **獎勵不能只停在 Demo points；要進入真正的家庭零用金流程。**
-   - 學習產生待領零用金。
-   - 被授權家長確認已實際發給孩子。
-   - 系統留下已發放紀錄。
+2. **學習獎勵要累積進 saving pool / 待領零用金。**
+   - 學習時只負責「賺」。
+   - 每次學習與獎勵事件都要寫入 Google Sheet。
+   - saving pool 由事件重新計算。
+3. **真正的零用金發放是另一個家長頁流程。**
+   - 家長頁讀取 Google Sheet 後顯示可提領金額。
+   - 家長提領後寫一筆 payout 事件，再從 saving pool 扣除。
+   - TeenageStudyTool 目前每次以 $100 為單位；QeKStudy 是否沿用，留給後續發放 Story 確認。
    - 這仍然是家庭獎勵機制，不是銀行轉帳或支付平台。
-3. **學習紀錄與獎勵紀錄要寫入 Google Sheet。**
-   - 不再接受只存在 localStorage 的正式方案。
 
 這兩項 persistence / payout 需求直接觸發 BDD-004 原先的 pickup condition。
 
