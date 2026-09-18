@@ -211,6 +211,7 @@ BDD-005 以單一家庭 / 單一學生受控版本繼續：
 - 零用金是核心機制：可依困難程度給不同基礎點數、已掌握內容重複複習時獎勵遞減、每科每日有頂標；達頂標後仍可繼續學習。
 - 本 BDD 不指定實際金額，也不做自動選題、完整題庫或正式多家庭學習紀錄。
 - SDD-005：`docs/sdd/SDD-005-english-learning-reward-loop.md`
+- TDD-005：`docs/tdd/TDD-005-english-learning-reward-loop.md`
 
 ---
 
