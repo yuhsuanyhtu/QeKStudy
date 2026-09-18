@@ -1,986 +1,800 @@
-# SDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop
+# SDD-005 — 英文最小學習與獎勵閉環
+# English Minimum Learning & Reward Loop
 
-狀態 Status: DRAFT — awaiting review  
-對應需求 Requirement: BDD-005 APPROVED  
-日期 Date: 2026-09-18
-
-## 1. 目的 / Purpose
-
-BDD-005 要做的是 QeKStudy 第一個真正可操作的學生學習閉環。
-
-第一版只做英文，讓學生可以：
-
-- 自己選擇單字閃卡或測驗；
-- 完整看過一課單字後取得基本獎勵；
-- 做包含目前內容、以前學過內容與合格會考考古題的測驗；
-- 答錯後知道去哪裡複習；
-- 自己決定重試或繼續；
-- 保留第一次作答結果；
-- 依困難程度、重複複習與每日上限計算獎勵；
-- 看懂這次學了什麼，以及獎勵怎麼來。
-
-This design delivers the first student-facing QeKStudy learning loop in English, without expanding into the full future learning platform.
+狀態 Status: **DRAFT — 等待確認 / Awaiting review**  
+對應需求 Requirement: **BDD-005 APPROVED**  
+日期 Date: **2026-09-18**
 
 ---
 
-## 2. 本 Story 的設計邊界 / Story Boundary
+## 1. 這份設計要解決什麼 / What this design is for
 
-### 005 會做 / In scope
+BDD-005 要做的是 QeKStudy 第一個真正給學生操作的英文學習流程。
 
-- English-only student demo
-- flashcards
-- one mixed assessed quiz
-- current + previously learned content
-- at least one eligible official CAP past-exam question
-- actionable review guidance after mistakes
-- retry or continue choice
-- first-attempt truth
-- difficulty-based reward points
-- lower reward for repeated mastered content
-- English daily reward cap
-- result / reward summary
-- legally reusable, traceable learning content
+第一版只做英文，學生可以：
 
-### 005 不做 / Out of scope
+- 自己選擇看單字閃卡或做測驗；
+- 完整看完一課單字後取得基本獎勵；
+- 練現在正在學的內容；
+- 也練以前已經學過的內容；
+- 遇到目前已經有能力作答的會考考古題；
+- 答錯時知道要回哪裡複習；
+- 自己決定要重試，還是直接繼續；
+- 完成後看得到學習結果和獎勵。
 
-- production authentication
-- real multi-family learning history
-- real student names in learning records
-- Google Sheet learning/reward persistence
-- actual cash payout
-- parent reward-setting UI
-- AI question generation
-- adaptive difficulty
-- automatic search across all CAP questions
-- full knowledge graph
-- complete question-bank administration
-- teacher dashboard
+**English:**  
+SDD-005 designs the first usable English learning loop: flashcards, practice, review guidance, eligible CAP past-exam questions, student choice, and rewards.
+
+---
+
+## 2. 這一版做什麼、不做什麼 / Scope
+
+### 這一版會做
+
+- 英文學生頁
+- 單字閃卡
+- 一種一般測驗：中翻英
+- 會考題需要的選擇題
+- 現在內容 + 舊內容混合
+- 錯題複習方向
+- 重試或繼續
+- 第一次作答結果保留
+- 難度不同，獎勵可以不同
+- 已經會的內容重複做，獎勵遞減
+- 英文每日獎勵上限
+- 學習結果與獎勵摘要
+- 題目來源可追溯
+
+### 這一版不做
+
+- 正式登入
+- 真實多家庭學習紀錄
+- 真實學生姓名的學習紀錄
+- Google Sheet 學習紀錄
+- 真正的零用金發放
+- 家長調整獎勵規則的 UI
+- AI 自動出題
+- 自動調整難度
+- 自動搜尋所有適合的會考題
+- 完整題庫管理
+- 老師後台
 - streak
-- all TeenageStudyTool English modes
+- 一次把 TeenageStudyTool 所有英文題型搬過來
 
-BDD-005 的重點是先證明學習閉環，不是先完成整個平台。
-
----
-
-## 3. Authentication 與真實資料邊界 / Authentication and Real-data Boundary
-
-BDD-004 目前仍為 `DEFERRED · TRIGGER-BASED`。
-
-因此 BDD-005 **不寫入現有 Google Sheet，也不新增 schema**。
-
-原因：
-
-`docs/STATUS.md` 已明確把「保存真實姓名、學習紀錄或獎勵資料」列為 BDD-004 pickup trigger。
-
-BDD-005 UI 只使用：
-
-- anonymous Demo Student
-- demo content
-- demo reward state
-- browser-local demo storage
-
-不得把 BDD-005 的 local demo state 宣稱為正式學生紀錄。
-
-### 如果之後真的讓 QeK 或第二個家庭用來累積真實學習/零用金
-
-先停止擴充 persistence：
-
-`trigger → review BDD-004 → confirm requirements → SDD/TDD`
-
-不能直接把 anonymous demo store 改名後當正式資料庫。
+**English:**  
+The first version stays small. It proves the learning-and-reward loop without building production authentication, long-term learning history, AI generation, or the full English platform.
 
 ---
 
-## 4. UI 入口 / Student UI Entry
+## 3. 為什麼這一版先不存正式學習紀錄 / Why real learning history is not persisted yet
 
-新增獨立學生頁：
+BDD-004 目前仍然是延後中的 Authentication Story。
 
-`english.html`
+而 docs/STATUS.md 已經寫明：
+
+> 一旦要保存真實姓名、學習紀錄或獎勵資料，就要重新 review BDD-004。
+
+所以 BDD-005 不新增 Google Sheet，也不改現在的資料庫 schema。
+
+第一版只保存：
+
+- Demo 學習進度
+- Demo 答題狀態
+- Demo 獎勵點數
+
+而且只存在目前瀏覽器裡。
+
+這些資料不能被當成正式學生紀錄。
+
+如果之後要讓 QeK 或第二個家庭真正累積學習紀錄與零用金資料：
+
+> 先重新 review BDD-004，再決定正式資料怎麼存。
+
+**English:**  
+BDD-005 uses anonymous browser-local demo state only. Real learning or reward persistence would trigger a review of BDD-004 first.
+
+---
+
+## 4. 學生會從哪裡進入 / Student entry point
+
+新增一個獨立英文學生頁：
+
+english.html
 
 搭配：
 
-- `english-app.js`
-- `english.css`（可重用既有 style tokens，但不要把家庭管理 UI 與學生學習流程綁在同一個 controller）
+- english-app.js
+- english.css
+
+原因很單純：
+
+現在的 index.html 是家庭功能驗收畫面；Apps Script 畫面是家庭持久化與改名驗收畫面。
+
+英文學習是學生流程，不要全部混在同一個頁面裡。
+
+現有家庭功能保留，不刪掉。
+
+**English:**  
+English learning gets its own student-facing page so it does not interfere with the existing family/admin acceptance UI.
+
+---
+
+## 5. 整體程式怎麼分 / High-level structure
+
+第一版拆成三層：
+
+~~~text
+英文單字與題目資料
+        ↓
+學習邏輯
+        ↓
+學生看到的英文畫面
+~~~
+
+學習邏輯再分成幾個小部分：
+
+- **單字閃卡計時**：每個字到底有沒有真的看滿 1 秒
+- **測驗組題**：哪些題可以出現在這次測驗
+- **答案判定**：答對還是答錯
+- **獎勵計算**：這次應該拿多少點
+- **Demo 資料保存**：記住今天已經做過什麼
+
+UI 只負責顯示與接收操作。
+
+UI 不自己算獎勵，也不自己決定哪一題會考題可以出。
+
+**English:**  
+The UI stays thin. Separate learning modules handle flashcard timing, quiz composition, answer checking, rewards, and demo state.
+
+---
+
+## 6. 第一個一般測驗先做中翻英 / First regular quiz mode
+
+第一版一般測驗先做：
+
+**中文 → 英文**
 
 原因：
 
-1. 現有 `index.html` 是 BDD-001 家庭驗收 UI。
-2. Apps Script `Index.html` 是 BDD-002/003 persistence / rename Demo。
-3. BDD-005 是學生流程，不應把既有家長驗收 UI 改造成混合頁。
-4. 獨立入口可以降低 regression 風險。
+- TeenageStudyTool 已經實際用過；
+- 需要學生自己回想英文，不只是猜選項；
+- 很適合觀察「第一次答對」和「重試後才答對」；
+- 可以同時使用現在和以前學過的單字。
 
-可在現有首頁增加一個清楚標示的：
+另外，正式會考題多數是選擇題，所以第一版也要有最小的四選一支援。
 
-`進入 English Demo`
+因此第一版只需要兩種答題方式：
 
-但不移除既有家庭驗收能力。
+- 中翻英
+- 選擇題
 
----
+Match、文意字彙、克漏字、閱讀等之後再開新的 Story 慢慢加入。
 
-## 5. 高階架構 / High-level Architecture
-
-BDD-005 採「資料 / domain logic / UI」分離。
-
-```text
-data/english/*.json
-       ↓
-EnglishContentCatalog
-       ↓
-EnglishLearningService
-  ├─ FlashcardExposureTracker
-  ├─ QuizComposer
-  ├─ AnswerEvaluator
-  ├─ RewardEngine
-  └─ DemoLearningStore
-       ↓
-english-app.js
-       ↓
-english.html
-```
-
-### 原則
-
-- UI 不直接算獎勵。
-- UI 不直接判定會考題是否可出。
-- UI 不直接決定答錯後要複習哪裡。
-- 題目與來源資訊放在資料層。
-- reward rule 由可注入設定驅動。
-- domain modules 可以用 Node `node:test` 單測。
+**English:**  
+Chinese-to-English recall is the first regular practice mode. Minimal multiple-choice support is added so official CAP questions can also be used.
 
 ---
 
-## 6. 第一個測驗模式 / First Assessed Mode
+## 7. 系統怎麼知道「現在學到哪裡」 / Learned scope
 
-第一版採 **中翻英 / Chinese-to-English recall** 作為主要一般題型。
+第一版先用一個匿名 Demo 學生設定。
 
-原因：
+系統要知道兩件事：
 
-1. TeenageStudyTool 已被真實使用。
-2. 中翻英需要主動回想，不只是四選一辨識。
-3. 容易驗證 first-try / retry。
-4. 可以直接使用目前與以前已學單字。
+1. **現在正在學什麼**
+2. **以前已經學過什麼**
 
-但正式會考題通常是選擇題，因此 mixed quiz 需要同時支援：
+概念上會有：
 
-- `ZH_TO_EN`
-- `MULTIPLE_CHOICE`
+~~~text
+目前範圍：二上目前課程
+已學知識：國一到目前為止已正式學過的單字、文法、句型……
+~~~
 
-第一版不實作 Match、文意字彙、克漏字、閱讀等其他完整模式。
+規則是：
 
-這些保留為後續 Story。
+> 只有已經正式學過的知識，才能拿來正式測驗。
 
----
+學生不能自己在畫面上把「還沒學的內容」勾成已學。
 
-## 7. Demo 學生學習範圍 / Demo Learned Scope
-
-使用匿名 Demo profile，不存真實姓名。
-
-建議資料：
-
-`data/english/demo-profile.json`
-
-概念結構：
-
-```json
-{
-  "profileId": "demo-student",
-  "subject": "english",
-  "currentScopeIds": ["..."],
-  "learnedKnowledgePointIds": ["...", "..."]
-}
-```
-
-### currentScopeIds
-
-表示目前課堂正在學的範圍。
-
-### learnedKnowledgePointIds
-
-表示已經正式學過、可以拿來測驗的知識。
-
-規則：
-
-`currentScope ⊆ learned scope`
-
-未列入 learned scope 的知識，不應用正式題目測驗。
-
-BDD-005 不做 UI 讓學生自己亂改「已學範圍」。
+**English:**  
+The demo profile records current classroom scope and already-learned knowledge. Formal quiz questions may only use learned content.
 
 ---
 
-## 8. 學習內容資料 / English Content Data
+## 8. 英文資料怎麼放 / Learning content files
 
-建議目錄：
+第一版資料放在 repo 裡，建議：
 
-```text
-data/
-└─ english/
-   ├─ demo-profile.json
-   ├─ lessons.json
-   ├─ questions.json
-   └─ reward-config.demo.json
-```
+~~~text
+data/english/
+  demo-profile.json
+  lessons.json
+  questions.json
+  reward-config.demo.json
+~~~
 
-### lesson
+### lessons.json
 
-```text
-lessonId
-displayName
-scopeId
-knowledgePointIds[]
-words[]
-source
-```
+放：
 
-### word
+- 課次
+- 單字
+- 中文意思
+- 對應知識點
+- 複習位置
+- 來源
 
-```text
-wordId
-english
-chinese
-knowledgePointIds[]
-reviewTarget
-source
-```
+### questions.json
 
-### question
+放：
 
-```text
-questionId
-kind
-scopeKind        CURRENT | PRIOR | CAP
-difficultyId
-prompt
-choices?         // MULTIPLE_CHOICE only
-acceptedAnswers? // ZH_TO_EN only
-knowledgePointIds[]
-prerequisiteKnowledgePointIds[]
-reviewTarget
-source
-```
+- 題目
+- 題型
+- 答案
+- 難度
+- 現在題 / 舊題 / 會考題
+- 需要哪些已學知識
+- 答錯時去哪裡複習
+- 題目來源
 
----
+### reward-config.demo.json
 
-## 9. 題目來源與 provenance / Content Provenance
+放：
 
-每筆正式 Demo 內容至少保留：
+- 每日英文上限
+- 閃卡完成獎勵
+- 不同難度的基本點數
+- 第一次答對與重試答對的差異
+- 重複複習的遞減規則
 
-```text
-source.type
-source.name
-source.url or official identifier
-source.licenseOrLegalBasis
-source.attribution
-source.year?           // official exam
-source.questionNumber? // official exam
-```
+實際點數不要散落在程式碼裡。
 
-### source.type
-
-首版支援：
-
-- `PUBLIC_DOMAIN`
-- `OPEN_LICENSE`
-- `OFFICIAL_EXAM`
-- `CURRICULUM_REFERENCE`
-
-### CURRICULUM_REFERENCE
-
-只能表示：
-
-「這個來源用來確認學習範圍」。
-
-不能因此把受保護的課文、圖片、題目、解析直接複製進 QeKStudy。
-
-### CAP 題
-
-官方題目保留：
-
-- 年度
-- 題號
-- 正式來源
-- QeKStudy 自己建立的 knowledge-point mapping
-- QeKStudy 自己寫的 review target / explanation
-
-不搬用第三方參考網站的解析。
+**English:**  
+Content, questions, and reward settings live in separate JSON files so they can be changed without rewriting the UI.
 
 ---
 
-## 10. Flashcard Exposure Tracker / 單字閃卡計時
+## 9. 題目來源一定要能追查 / Content sources
 
-模組：
+每一筆正式使用的題目或教材，都要知道它從哪裡來。
 
-`src/learning/flashcard-exposure.js`
+至少要記：
 
-### 核心資料
+- 來源類型
+- 來源名稱
+- 網址或正式識別資料
+- 授權或可以使用的法律依據
+- 如果需要署名，要留下署名資訊
+- 會考題要記年度與題號
 
-對每個 word：
+來源分成：
 
-```text
-wordId
-visibleMs
-qualified
-```
+- 公共領域
+- 開放授權
+- 正式考試題
+- 只用來了解課程範圍的參考來源
 
-### 計時規則
+如果某個課本、參考書或網站只是拿來確認「學生現在學到哪裡」，就只能當範圍參考，不能直接把受保護內容搬進 QeKStudy。
 
-一個單字只有在：
+**English:**  
+Every learning item must retain traceable source and licensing/legal information. Curriculum references do not automatically grant reuse rights.
 
-- 該 card 是目前 active card
-- 頁面目前可見
+---
 
-時才累積 visible time。
+## 10. 單字閃卡怎麼算「真的看過」 / Flashcard timing
 
-使用：
+這是 BDD-005 很重要的一條。
 
-- browser `performance.now()` 計算 duration
-- `visibilitychange` 暫停背景分頁計時
+假設一課有 30 個單字：
 
-### 完成條件
-
-```text
-every(word.visibleMs >= 1000)
-```
-
-順序不限。
-
-學生可以往前、往後翻。
-
-同一個字多次看到的**實際可見時間可以累加**。
+每一個單字都要**自己實際出現在畫面至少 1 秒**。
 
 例如：
 
-`600ms + 500ms = 1100ms → qualified`
+- apple 看 1.2 秒 → 算
+- banana 看 0.5 秒 → 不算
+- cat 看 0.6 秒，之後再回來看 0.5 秒 → 合計 1.1 秒，算
 
-但把整個頁面停在某一張卡，不會讓其他卡自動累積時間。
-
-### 完成事件
-
-只在整課從未完成 → 完成的那一刻產生一次：
-
-`FLASHCARD_LESSON_COMPLETED`
-
-UI 自己不能直接發獎勵。
-
----
-
-## 11. Quiz Composer / 測驗組成
-
-模組：
-
-`src/learning/quiz-composer.js`
-
-BDD-005 不做自動演算法。
-
-第一版使用人工整理的 Demo manifest / question pool。
-
-Composer 必須驗證本輪至少包含：
-
-- current 題目
-- at least one prior 題目
-- at least one eligible CAP 題
-
-但 **SDD 不硬寫固定 3:1:1 比例**。
-
-比例留給內容設定，不寫死在 domain。
-
-### CAP eligibility
-
-```text
-question.prerequisiteKnowledgePointIds
-  ⊆
-profile.learnedKnowledgePointIds
-```
-
-全部 prerequisite 都已學過才 eligible。
-
-只要缺一個：
-
-`QUESTION_NOT_ELIGIBLE`
-
-不能因為「學生是國二」就直接放入。
-
----
-
-## 12. Answer Evaluator / 作答判定
-
-模組：
-
-`src/learning/answer-evaluator.js`
-
-### ZH_TO_EN
-
-第一版：
-
-- trim leading/trailing spaces
-- case-insensitive
-- compare against `acceptedAnswers[]`
-
-不在 BDD-005 自動做模糊拼字容錯。
-
-若老師認可替代答案，直接列在 `acceptedAnswers[]`。
-
-### MULTIPLE_CHOICE
-
-使用 stable `choiceId`，不以畫面文字位置判斷。
-
----
-
-## 13. Attempt State / 作答狀態
-
-每題 session state：
-
-```text
-questionId
-attempts[]
-firstAttemptCorrect
-resolved
-rewardGranted
-```
-
-每次 attempt：
-
-```text
-attemptIndex
-answer
-correct
-```
-
-### 第一次答錯
-
-保留：
-
-`firstAttemptCorrect = false`
-
-UI 顯示：
-
-- 答錯
-- review target
-- `再試一次`
-- `繼續下一題`
-
-### Retry
-
-允許重試，不鎖死最大次數。
+一個字可以分幾次累積到 1 秒。
 
 但是：
 
-**同一題在同一輪最多只會因「第一次答對成功狀態」發一次答題獎勵。**
+- 停在一張卡 30 秒，不會讓其他 29 張自動完成
+- 瀏覽器切到背景時，不繼續偷偷計時
 
-也就是：
+只有全部單字都達到 1 秒，整課閃卡才算完成。
 
-- 第一次答對 → award once
-- 第二/三次才第一次答對 → award once using retry rule
-- 已經答對後再重做 → 本輪不重複發該題獎勵
+完成後產生一次「本課閃卡完成」，再交給獎勵計算模組決定點數。
 
-避免同一題在同一 session 無限刷點。
-
----
-
-## 14. Review Target / 複習方向
-
-題目資料直接帶 review target。
-
-概念：
-
-```text
-reviewTarget.type
-reviewTarget.label
-reviewTarget.location
-reviewTarget.hint
-```
-
-例如 type 可以是：
-
-- WORD
-- GRAMMAR
-- SENTENCE_PATTERN
-- TEXT
-- KNOWLEDGE_POINT
-
-UI 至少顯示：
-
-1. 回哪裡看
-2. 要看什麼
-
-不能只有：
-
-`答錯`
-
-也不能只把正確答案丟給學生就結束。
+**English:**  
+Each flashcard must accumulate at least one second of real visible time. Background time does not count, and one card cannot complete other cards.
 
 ---
 
-## 15. Reward Model / 獎勵模型
+## 11. 測驗怎麼組 / Quiz composition
 
-模組：
+第一版先不要做聰明的自動選題。
 
-`src/learning/reward-engine.js`
+先人工準備一小組 Demo 題。
 
-BDD-005 使用 **points** 作為獎勵計算單位。
+但每次 Demo 測驗至少要有：
 
-不要在 domain 裡寫：
+- 現在正在學的內容
+- 至少一題以前學過的內容
+- 至少一題目前已經有能力作答的會考考古題
 
-- NT$
-- 現金支付
-- 已實際發錢
+這一版**不寫死比例**。
 
-### 原因
+例如不先規定一定要 3 題現在 + 1 題舊題 + 1 題會考。
 
-005 驗證的是「學習行為 → 零用金獎勵點數」的機制。
+比例之後可以根據學生使用情況再調整。
+
+**English:**  
+The first quiz uses a manually curated small set and must include current, prior, and eligible CAP content, without hard-coding a fixed ratio.
+
+---
+
+## 12. 會考題什麼時候可以出 / CAP question eligibility
+
+一題會考題能不能出，不看「這題像不像國二程度」。
+
+要看：
+
+> 解這題需要的知識，學生是不是都已經學過。
+
+例如一題需要：
+
+- 某些單字
+- 過去式
+- because / so
+- 閱讀上下文
+
+只要全部已學，就可以出。
+
+如果其中任何一個必要知識還沒學：
+
+> 這題先不要出。
+
+這一版不做「自動掃描全部歷屆題目」。
+
+只是人工挑少量會考題，系統負責檢查這題需要的知識是否都已學。
+
+**English:**  
+A CAP question is eligible only when all of its required knowledge has already been learned.
+
+---
+
+## 13. 答案怎麼判斷 / Answer checking
+
+### 中翻英
+
+第一版做基本判斷：
+
+- 前後空白忽略
+- 英文字母大小寫忽略
+- 可以設定多個老師認可的正確答案
+
+例如某題如果老師認為兩種英文都可以，就直接把兩個答案都列為可接受答案。
+
+第一版不做自動拼字模糊判斷。
+
+### 選擇題
+
+每個選項有固定 ID。
+
+系統依 ID 判斷，不依畫面上「第幾個位置」判斷。
+
+**English:**  
+Chinese-to-English answers support multiple accepted forms, while multiple-choice uses stable option IDs.
+
+---
+
+## 14. 第一次答錯不能被後來答對蓋掉 / Attempt history
+
+每一題要記：
+
+- 第一次有沒有答對
+- 每一次嘗試答了什麼
+- 最後有沒有解決
+- 這題有沒有已經發過獎勵
+
+例如：
+
+第一次錯 → 第二次對
+
+系統最後要知道：
+
+> 第一次錯，後來重試成功。
+
+不能把它改成：
+
+> 第一次就答對。
+
+學生答錯後畫面提供：
+
+- 再試一次
+- 繼續下一題
+
+不強迫他一定要重試。
+
+同一題同一輪最多只發一次「答對獎勵」。
+
+避免同一題一直重做一直加點。
+
+**English:**  
+Attempt history preserves the first result. Retry success does not erase the initial mistake, and one question can award success points only once per session.
+
+---
+
+## 15. 答錯時怎麼告訴他去哪裡複習 / Review guidance
+
+每一題資料都要事先有複習方向。
+
+至少告訴學生：
+
+1. **去哪裡看**
+2. **要看什麼**
+
+例如：
+
+> 二上 Unit 2  
+> irregular verbs  
+> 回去確認 go / went、see / saw 這一類不規則動詞
+
+或：
+
+> because / so  
+> 回去看原因與結果的句型差別
+
+複習方向可以是：
+
+- 單字
+- 文法
+- 句型
+- 課文
+- 知識點
+
+不能只有「答錯」。
+
+也不能只丟正確答案就結束。
+
+**English:**  
+Each wrong answer returns a concrete review location and what to review, not merely a wrong mark or the correct answer.
+
+---
+
+## 16. 獎勵怎麼算 / Reward calculation
+
+第一版先用「點數」計算，不直接在程式裡處理เงินจริง。
+
+原因是目前要驗證的是：
+
+> 學習行為 → 產生零用金獎勵價值
 
 真正的：
 
-- 點數如何換成金額
+- 幾點換多少錢
 - 家長核准
 - 實際發放
-- 家長調整
+- 家長手動調整
 
-不是 BDD-005。
+之後再做。
 
-### Reward config
+### 基本概念
 
-`reward-config.demo.json` 提供結構，但 SDD 不決定實際數字。
+一題的獎勵由三件事影響：
 
-至少包含：
+1. **題目難度**
+2. **第一次答對，還是重試才答對**
+3. **以前是不是已經答對過很多次**
 
-```text
-subjectDailyCaps.english
-flashcard.lessonCompletionPoints
-difficultyBasePoints
-firstTryFactor
-retryFactor
-repeatDecay
-```
+概念上：
 
-實際 numeric values 必須在 Implementation 前用明確 Demo config 設定，不能散落 hard-code 在 UI。
+~~~text
+本題原始點數
+= 難度基本點數
+× 作答次數調整
+× 重複複習調整
+~~~
 
----
+最後還要看：
 
-## 16. Reward Calculation / 獎勵計算
+> 今天英文還剩多少可拿點數。
 
-### Assessed question
+如果今天只剩 2 點額度，但這題原本值 5 點：
 
-概念：
+> 最後只加 2 點。
 
-```text
-rawPoints =
-  basePoints(difficulty)
-  × attemptFactor(first-try or retry)
-  × repeatFactor(previous mastery count)
-```
-
-最後：
-
-```text
-awardedPoints =
-  min(rawPoints, remainingSubjectDailyCap)
-```
-
-### 原則
-
-- harder content may have higher base points
-- retry can be worth less than first-try correct
-- previously mastered content earns less on later correct review
-- daily cap clamps awarded points
-- cap never blocks learning
-
-### 點數運算
-
-RewardEngine 最終輸出 integer points。
-
-若 config 使用 factor，rounding policy 由 RewardEngine 單一處理，UI 不自行 round。
+**English:**  
+Rewards are configuration-driven and depend on difficulty, first-try vs retry, repeat history, and the remaining daily English cap.
 
 ---
 
-## 17. Flashcard Reward / 閃卡獎勵
+## 17. 單字閃卡的獎勵和「會不會」要分開 / Flashcard reward is not mastery
 
-Flashcard reward 與 mastery reward 分開。
+把一課全部單字看完，只代表：
 
-`FLASHCARD_LESSON_COMPLETED`：
+> 今天完整把這課單字看過一次。
 
-- 代表完整 exposure
-- 不把單字標成 mastered
-- 取得 lesson completion base points
-- 同樣受 English daily cap 影響
+不代表：
 
-同一天同一課重複完成是否再次給分：
+> 這些單字全部會了。
 
-**不要寫死在 UI。**
+所以閃卡完成會拿到「接觸獎勵」，但不會因此增加「已掌握次數」。
 
-Reward config 保留：
+同一天同一課做第二次閃卡要不要再給分，目前不在 SDD 裡硬決定。
 
-`flashcard.sameDayRepeatPolicy`
+這個規則會放在獎勵設定裡，等產品規則確認後再填。
 
-BDD-005 自動測試至少驗證第一次完整完成可得基本獎勵。
-
-後續若要決定「同一天第二次是否再給」，先確認產品規則，再加入對應測試。
+**English:**  
+Flashcard completion earns an exposure reward but does not mark vocabulary as mastered.
 
 ---
 
-## 18. Repeat / Mastery Count / 重複複習次數
+## 18. 重複複習怎麼遞減 / Repeat decay
 
-Demo state 對 assessed content 記：
+每個可測驗的內容記一個：
 
-```text
-masterySuccessCountByContentId
-```
+> 過去成功答對過幾次
 
-只有答對成功才增加 success count。
+只有答對才增加。
 
-答錯本身不增加「已掌握次數」。
+答錯不算「掌握」。
 
-RewardEngine 在給本次獎勵前讀取：
+例如：
 
-`previousSuccessCount`
+- 第一次答對 → 正常獎勵
+- 第二次再答對 → 較少
+- 第三次再答對 → 再少
 
-因此：
+但學生仍然可以一直練。
 
-- first known success
-- second correct review
-- third correct review
+這個「歷史上答對幾次」和「同一題這次重試幾次」是兩件不同的事。
 
-可以套用不同的 repeat decay。
-
-這和同一題同一 session 的 retry 次數分開計算。
+**English:**  
+Historical successful reviews and same-session retries are tracked separately.
 
 ---
 
-## 19. Daily Cap / 每科每日頂標
+## 19. 每日英文上限怎麼運作 / Daily English cap
 
-Demo store 記：
+系統每天記：
 
-```text
-dailyRewards[YYYY-MM-DD].english
-```
+> 今天英文已經拿到多少點。
 
-RewardEngine 每次 awarding：
+每次要加點前：
 
-1. 計算 raw points。
-2. 讀 English 今日已得 points。
-3. 算 remaining cap。
-4. clamp awarded points。
-5. 回傳 cap 狀態。
+1. 先算這次本來應得多少
+2. 看今天英文還剩多少上限
+3. 最多只能加到今日上限
 
-回傳至少：
+達到上限之後：
 
-```text
-rawPoints
-awardedPoints
-dailyTotalBefore
-dailyTotalAfter
-dailyCap
-capReached
-capLimited
-reasonBreakdown[]
-```
+- 還是可以看閃卡
+- 還是可以做測驗
+- 還是可以看錯題複習方向
+- 只是今天英文不再增加點數
 
-UI 可以因此清楚說：
+畫面要清楚顯示：
 
-- 這題原本值多少
-- retry / repeat 後是多少
-- 是否因今日頂標被截斷
+> 今天英文獎勵已拿滿。
 
-達頂標後：
-
-- 仍可翻閃卡
-- 仍可答題
-- 仍可看 review target
-- awardedPoints = 0
+**English:**  
+The daily cap limits points only; it never blocks learning.
 
 ---
 
-## 20. Demo Learning Store / Demo 狀態儲存
+## 20. Demo 資料存在瀏覽器哪裡 / Demo state
 
-模組：
+第一版用瀏覽器自己的 localStorage。
 
-`src/learning/demo-learning-store.js`
+只存 Demo 資料：
 
-Browser adapter 可使用：
+- 哪些閃卡已經看滿 1 秒
+- 過去哪些內容答對過幾次
+- 今天英文拿了多少點
+- 如果需要，本次未完成測驗的狀態
 
-`localStorage`
-
-namespace：
-
-`qekstudy:bdd005:demo:v1`
-
-只存匿名 Demo state：
-
-- flashcard completion state
-- mastery success counts
-- daily English reward points
-- current unfinished demo session if needed
-
-不得存：
+不存：
 
 - 真實姓名
 - family ID
 - 真實 student ID
-- production allowance ledger
+- 正式零用金帳本
 
-### reset
+UI 提供：
 
-English Demo UI 提供：
+> 重設 Demo 學習資料
 
-`重設 Demo 學習資料`
+方便我們反覆驗收。
 
-方便 Acceptance 重跑。
-
-### 資料格式版本
-
-local demo state 包含：
-
-`version: 1`
-
-因為不是正式資料，如果版本不相容：
-
-- UI 清楚提示
-- 可以 reset Demo state
-- 不需要做 Google Sheet migration
+**English:**  
+Anonymous demo progress is stored in localStorage and can be reset for acceptance testing.
 
 ---
 
-## 21. EnglishLearningService / Application Service
+## 21. 學生畫面會長什麼樣 / UI flow
 
-主 application service：
-
-`src/learning/english-learning-service.js`
-
-它是 UI 唯一主要入口。
-
-建議 methods：
-
-```text
-getHome()
-startFlashcards(lessonId)
-recordFlashcardExposure(wordId, milliseconds)
-getFlashcardProgress()
-completeFlashcardsIfEligible()
-
-startQuiz()
-getCurrentQuestion()
-submitAnswer(answer)
-retryQuestion()
-continueToNextQuestion()
-
-getSessionSummary()
-getDailyRewardStatus()
-resetDemoState()
-```
-
-實際 function naming 可在實作時微調，但 UI 不直接操作 store / reward engine / selector。
-
----
-
-## 22. UI Flow / UI 流程
-
-### English Home
+### 英文首頁
 
 顯示：
 
-- English Demo
-- 今日 English reward progress
 - 單字閃卡
 - 測驗
-- Demo data warning
+- 今天英文獎勵進度
+- Demo 提示
 
-### Flashcards
+### 單字閃卡
 
 顯示：
 
-- lesson name
-- word
-- meaning
-- current index
-- 本課已合格卡數 / 總卡數
-- previous / next
+- 課次
+- 英文單字
+- 中文意思
+- 第幾個單字
+- 已經看滿 1 秒的數量 / 全部數量
+- 上一個 / 下一個
 
-只有 card 實際 active + page visible 時計時。
+整課完成後：
 
-完成 30/30：
+- 告訴學生已完成
+- 顯示這次拿多少點
+- 顯示今天英文累積多少 / 上限多少
 
-- 顯示 completed
-- 顯示本次 awarded points
-- 顯示今日 English total / cap
+### 測驗
 
-### Quiz
+每題：
 
-每題顯示：
-
-- 題目
-- 作答 UI
-- submit
+- 顯示題目
+- 學生作答
+- 送出
 
 答對：
 
-- correct
-- awarded points
-- next
+- 告訴他答對
+- 顯示這題拿多少點
+- 可以下一題
 
 答錯：
 
-- wrong
-- review target
-- retry
-- continue
+- 告訴他答錯
+- 顯示去哪裡複習
+- 再試一次
+- 繼續下一題
 
-### Summary
+### 結果頁
 
 顯示：
 
-- completed questions
-- first-try correct
-- retry-correct
-- unresolved
-- review targets
-- reward breakdown
-- today English total / cap
+- 做了幾題
+- 第一次就答對幾題
+- 重試後答對幾題
+- 還沒解決幾題
+- 哪些內容要回去複習
+- 這次拿多少點
+- 每一筆獎勵為什麼拿到
+- 今天英文總點數 / 每日上限
 
 不只顯示一個總分。
 
----
-
-## 23. Reward Transparency / 獎勵透明
-
-任何加點都產生可顯示 breakdown。
-
-例如概念上：
-
-```text
-reason:
-  "中翻英 · 困難度 2"
-attempt:
-  "第一次答對"
-repeat:
-  "第一次掌握"
-cap:
-  "未達今日上限"
-awarded:
-  N points
-```
-
-若被 cap 截斷：
-
-```text
-raw: N
-remaining today: M
-awarded: M
-```
-
-學生要看得懂「為什麼是這個點數」。
+**English:**  
+The UI has an English home, flashcards, quiz, and summary. Results distinguish first-try correct, retry-correct, unresolved items, review targets, and reward breakdown.
 
 ---
 
-## 24. Error Contract / 錯誤狀態
+## 22. 學生要看得懂獎勵怎麼來 / Reward transparency
 
-BDD-005 domain 建議：
+每次加點都要能說明原因。
 
-- `CONTENT_NOT_AVAILABLE`
-- `CONTENT_INVALID`
-- `QUESTION_NOT_ELIGIBLE`
-- `ANSWER_REQUIRED`
-- `SESSION_NOT_ACTIVE`
-- `SESSION_COMPLETE`
-- `REWARD_CONFIG_INVALID`
-- `DEMO_STATE_INVALID`
+例如：
 
-UI 顯示一般人可懂文字，不直接把 code 丟給學生。
+~~~text
+中翻英
+難度：2
+第一次答對
+以前沒有答對過
+本題 +3 點
+~~~
+
+如果因為每日上限被截掉：
+
+~~~text
+這題原本 +5 點
+今天只剩 2 點額度
+實際 +2 點
+~~~
+
+不能只顯示：
+
+> +2
+
+卻不告訴學生原因。
+
+**English:**  
+Every reward should include a human-readable explanation, including any reduction caused by retry, repetition, or the daily cap.
 
 ---
 
-## 25. Content Validation / 內容驗證
+## 23. 資料有問題時怎麼處理 / Invalid content
 
-在內容進入可用 Demo 前驗證：
+如果某個單字或題目缺必要資料，就不要讓它出現在學生畫面。
 
-### word
+例如題目至少要有：
 
-必須有：
+- 題目 ID
+- 題型
+- 答案
+- 難度
+- 對應知識點
+- 複習方向
+- 來源
 
-- stable wordId
-- English
-- Chinese
-- knowledge point
-- source metadata
+會考題還要多：
 
-### assessed question
-
-必須有：
-
-- stable questionId
-- supported kind
-- answer data
-- difficultyId
-- knowledgePointIds
-- reviewTarget
-- source metadata
-
-### CAP
-
-額外需要：
-
-- source.type = OFFICIAL_EXAM
-- year
-- questionNumber
-- prerequisiteKnowledgePointIds
-- eligibility check passes
+- 年度
+- 題號
+- 解題需要的已學知識
 
 資料不完整：
 
-`CONTENT_INVALID`
+> 這題不進入 Demo。
 
-不讓該內容出現在學生 UI。
+**English:**  
+Incomplete or invalid content is rejected before it reaches the student UI.
 
 ---
 
-## 26. 不修改現有 Google Sheet Schema / No Database Migration
+## 24. 這一版不改 Google Sheet / No database migration
 
-BDD-005：
+BDD-005 完成後：
 
-`schema_version stays 2`
+schema_version 仍然是 **2**。
 
 不新增：
 
-- learning_attempts sheet
-- rewards sheet
-- question_history sheet
-- mastery sheet
+- learning_attempts
+- rewards
+- mastery
+- question_history
 
-原因不是這些未來不需要，而是現在正式 Authentication 尚未完成。
+不是因為未來不需要。
 
-一旦要保存真實學習與獎勵資料，就重新 review BDD-004，並在後續 Story 正式設計 schema / migration / backup / compatibility。
+而是：
+
+> 真實學習紀錄一旦要正式保存，就要先處理 Authentication。
+
+**English:**  
+BDD-005 keeps Google Sheets at schema version 2 and adds no formal learning/reward tables.
 
 ---
 
-## 27. 與 BDD-001~003 的隔離 / Regression Safety
-
-現有：
-
-- family domain
-- persistent family service
-- admin management service
-- Apps Script family persistence
-- schema v2
-
-全部保持原行為。
+## 25. 不破壞 BDD-001～003 / Regression safety
 
 BDD-005 不改：
 
-- family authorization
-- parent ownership
-- rename
+- 家庭隔離
+- 家長 ownership
+- 家庭/孩子持久化
+- 改名
 - soft delete
-- audit_log
-- Apps Script schema
+- audit log
+- Apps Script schema v2
 
-English Demo 是新 student-facing slice。
+英文學生頁是新增的一條流程。
+
+既有 57 個 regression tests 必須繼續通過。
+
+**English:**  
+BDD-005 is additive. Existing family, persistence, and admin behavior must remain unchanged.
 
 ---
 
-## 28. Planned Files / 預計檔案
+## 26. 預計新增哪些檔案 / Planned files
 
-SDD-005 implementation 預計新增：
+預計新增：
 
-```text
+~~~text
 english.html
 english-app.js
 english.css
@@ -999,142 +813,139 @@ src/learning/
   answer-evaluator.js
   reward-engine.js
   demo-learning-store.js
-```
+~~~
 
-測試檔名留到 TDD-005 Red 正式建立。
+中文用途：
 
-Apps Script / Google Sheets 不新增 005 persistence files。
+- english-content-catalog.js：讀英文教材與題目
+- english-learning-service.js：把整個英文流程串起來
+- flashcard-exposure.js：判斷單字有沒有真的看滿 1 秒
+- quiz-composer.js：準備這輪測驗題
+- answer-evaluator.js：判斷答案
+- reward-engine.js：算獎勵
+- demo-learning-store.js：保存匿名 Demo 進度
 
----
-
-## 29. TDD-005 Boundary / 下一階段測試邊界
-
-TDD Red 至少覆蓋：
-
-1. English home exposes flashcards and quiz.
-2. student is not forced through fixed activity order.
-3. one word reaches qualified exposure only after >= 1000ms visible exposure.
-4. background/hidden time does not count.
-5. all words qualified → lesson flashcard completion.
-6. any unqualified word → no full-lesson flashcard completion.
-7. flashcard completion produces base reward event.
-8. flashcard completion does not mark words mastered.
-9. quiz contains current content.
-10. quiz contains prior learned content.
-11. quiz contains at least one eligible CAP question.
-12. CAP with all prerequisites learned is eligible.
-13. CAP with any unlearned prerequisite is rejected.
-14. ZH_TO_EN evaluates accepted answers correctly.
-15. MULTIPLE_CHOICE evaluates stable choice IDs correctly.
-16. first attempt result is preserved.
-17. wrong answer returns review target.
-18. student can retry after wrong answer.
-19. student can continue after wrong answer.
-20. retry success does not rewrite firstAttemptCorrect.
-21. one question grants at most one success reward within a session.
-22. configured harder difficulty can produce higher base reward.
-23. repeated mastered content uses lower configured reward.
-24. retry and historical repeat are tracked separately.
-25. daily English cap clamps awarded points.
-26. reaching cap does not block further learning.
-27. summary separates first-try / retry / unresolved.
-28. summary includes review targets.
-29. summary explains reward breakdown.
-30. malformed content is not exposed.
-31. CAP provenance includes year/question number.
-32. anonymous demo state contains no real family/student identity.
-33. BDD-001~003 regression remains green.
-34. English UI contract exercises real learning service rather than static mock.
+**English:**  
+The implementation adds a separate English page, JSON content files, and small testable learning modules.
 
 ---
 
-## 30. Design Decisions / 主要取捨
+## 27. 下一階段 TDD 要測什麼 / TDD-005 boundary
 
-### Decision A — 不碰 Google Sheet
+TDD-005 Red 至少要測：
 
-選擇：anonymous local demo state。
+1. 英文首頁可以進閃卡或測驗
+2. 學生不用照固定順序
+3. 單字真的看滿 1 秒才算
+4. 背景分頁時間不算
+5. 全部單字完成才有整課閃卡獎勵
+6. 閃卡完成不等於單字已掌握
+7. 測驗有現在內容
+8. 測驗有以前學過內容
+9. 測驗有至少一題合格會考題
+10. 會考題需要的知識全部已學才能出
+11. 有任何必要知識沒學就不能出
+12. 中翻英可以正確判分
+13. 選擇題可以正確判分
+14. 第一次答錯要保留
+15. 答錯要回傳複習方向
+16. 答錯後可以重試
+17. 答錯後也可以直接繼續
+18. 重試成功不能改寫第一次結果
+19. 同一題同一輪最多發一次答對獎勵
+20. 難度不同可以得到不同基本點數
+21. 重複答對的內容可以套用遞減規則
+22. retry 和歷史重複複習要分開
+23. 每日英文上限會限制加點
+24. 達上限後仍能繼續學
+25. 結果頁能分出第一次答對 / 重試答對 / 未解決
+26. 結果頁有複習方向
+27. 結果頁能解釋獎勵來源
+28. 題目來源資料完整
+29. Demo 狀態沒有真實家庭或學生身份
+30. BDD-001～003 regression 全部維持通過
+31. UI 要真的使用學習邏輯，不是做假畫面
 
-原因：不提前突破 BDD-004 trigger。
-
-### Decision B — 中翻英作第一個一般測驗
-
-選擇：ZH_TO_EN。
-
-原因：TeenageStudyTool 已有真實使用經驗，而且能測 active recall。
-
-### Decision C — mixed quiz 仍支援正式會考選擇題
-
-選擇：最小支援 MULTIPLE_CHOICE。
-
-原因：不能為了只做一種 UI 而把正式會考題排除在 005 之外。
-
-### Decision D — 不寫死題型比例
-
-選擇：由 Demo content manifest 組題，但 domain 驗證 current/prior/CAP 都存在。
-
-原因：3:1:1 等比例目前不是已確認產品需求。
-
-### Decision E — reward 由 config 驅動
-
-選擇：domain 不 hard-code 實際點數。
-
-原因：BDD 已確認規則，但未確認金額。
-
-### Decision F — points，不做實際 payout
-
-選擇：005 只計 reward points。
-
-原因：實際家庭核准、金額換算與發放應是正式 allowance lifecycle 的後續需求。
-
----
-
-## 31. Open Configuration Before Green / 實作前需填入但不阻塞 SDD 的設定
-
-以下不是 BDD 行為爭議，而是 Demo config 數值：
-
-- English daily cap points
-- flashcard full-lesson completion points
-- difficulty base points
-- retry factor / retry points
-- repeat decay schedule
-- same-day repeated flashcard completion policy
-
-TDD Red 可以用明確 test fixture 驗證規則關係。
-
-在真正 UI Green 前，Demo config 的實際數值要明確記錄，不得散落在程式碼。
+**English:**  
+TDD-005 will verify flashcard timing, mixed quiz content, CAP eligibility, first-attempt truth, review guidance, reward behavior, daily caps, demo privacy, and full regression.
 
 ---
 
-## 32. Definition of Done / 完成條件
+## 28. 這份設計目前做的主要決定 / Main design decisions
 
-BDD-005 只有在以下都完成才 Done：
+### 決定 1：005 不碰 Google Sheet
 
-- BDD approved
-- SDD approved
+先用匿名 Demo 資料。
+
+原因：不能提前跨過 BDD-004 的安全邊界。
+
+### 決定 2：第一個一般測驗用中翻英
+
+原因：TeenageStudyTool 已有實際使用經驗，而且能測主動回想。
+
+### 決定 3：會考題另外支援選擇題
+
+原因：不能因為第一個一般測驗是中翻英，就把會考考古題排除掉。
+
+### 決定 4：現在 / 舊題 / 會考題比例先不寫死
+
+原因：目前沒有真實證據支持固定比例。
+
+### 決定 5：獎勵規則放設定檔
+
+原因：獎勵原則已經確認，但實際數字還沒確認。
+
+### 決定 6：005 先算點數，不處理真正發錢
+
+原因：這一版先驗證「學習行為和獎勵連結」；家長核准、換算與真正發放之後再做。
+
+**English:**  
+The design intentionally keeps data local, starts with Chinese-to-English recall, supports CAP multiple-choice, avoids fixed quiz ratios, keeps rewards configurable, and postpones real payout.
+
+---
+
+## 29. 在開始實作前還要填哪些數字 / Demo settings still needed
+
+這些是設定值，不是新的產品需求：
+
+- 英文每天最多幾點
+- 一課閃卡完整看完給幾點
+- 各難度基本點數
+- 重試答對的點數或比例
+- 重複複習怎麼遞減
+- 同一天同一課閃卡做第二次是否再給點
+
+這些數字確認後，統一放在 reward-config.demo.json。
+
+不散落在程式碼裡。
+
+**English:**  
+Exact demo reward values still need to be filled in before the Green implementation, but the rules themselves are already defined.
+
+---
+
+## 30. BDD-005 什麼時候才算完成 / Definition of Done
+
+BDD-005 只有全部做到才算 Done：
+
+- BDD 已確認
+- SDD 已確認
 - TDD Red
-- implementation
+- 實作完成
 - TDD Green
-- English operable student UI
-- flashcard exposure acceptance
-- mixed current/prior/CAP quiz acceptance
-- wrong-answer review + retry/continue acceptance
-- reward / repeat decay / daily cap acceptance
-- full BDD-001~005 regression
-- content provenance verified
-- no real student learning/reward data persisted before BDD-004 review
-- documentation updated
-- commit completed
+- 有真的可以操作的英文學生 UI
+- 閃卡 1 秒規則驗收通過
+- 現在 + 舊內容 + 會考題混合測驗驗收通過
+- 錯題複習方向驗收通過
+- 重試 / 繼續由學生自己選
+- 獎勵、重複遞減、每日上限驗收通過
+- BDD-001～005 完整 regression 通過
+- 題目來源驗證通過
+- 在 BDD-004 review 前沒有保存真實學生學習/獎勵資料
+- 文件同步
+- commit 完成
 
-No operable student UI = not Done.
+**沒有可操作的學生 UI，就不算 Done。**
 
----
-
-## English Summary
-
-SDD-005 introduces a separate English student demo built from traceable JSON content and testable pure-JavaScript learning modules.
-
-The first assessed mode is Chinese-to-English recall, while minimal multiple-choice support allows real eligible CAP past-exam questions to appear in the same mixed quiz. Flashcard completion requires at least one second of actual visible exposure per word.
-
-Reward calculation is configuration-driven: difficulty can increase base points, retry and repeated mastered content may reduce points, and a per-subject daily cap limits rewards without blocking learning.
-
-To preserve the existing authentication safety boundary, BDD-005 does not modify the Google Sheets schema and does not persist real student learning or reward records. Only anonymous demo state is stored locally. Real learning/reward persistence triggers a review of BDD-004 first.
+**English:**  
+BDD-005 is Done only after approved design, Red/Green TDD, an operable student UI, full learning/reward acceptance, provenance checks, and full regression.
