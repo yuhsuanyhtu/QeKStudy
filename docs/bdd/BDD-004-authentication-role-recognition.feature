@@ -2,12 +2,25 @@
 # QeKStudy BDD-004
 # 中文：使用者登入、學生身分與角色辨識
 # English: Authentication, learner identity, and role recognition
-# Status: ACTIVE / BDD APPROVED
+# Status: DEFERRED / REVIEWED / TRIGGER-BASED
 #
 # 2026-09-18 重新撿回原因：
 # BDD-005 已確認要把真實學習紀錄與學習產生的零用金獎勵寫入 Google Sheet。
 # 這符合原本的 BDD-004 pickup trigger，因此不能再維持 Deferred。
 # 真正的零用金發放屬於另一個家長頁流程，不在 BDD-005。
+#
+# 2026-09-18 再次決策：
+# 需求與安全邊界已 review，但產品決定不在此階段實作完整 Authentication。
+# BDD-005 先以「單一家庭 / 單一學生 / 受控使用」繼續，
+# 資料表仍用 family_id / student_id 清楚分割，之後 Authentication 再接上。
+# 公開 URL 仍不得被視為安全的多人使用邊界。
+#
+# 新 pickup triggers：
+# 1. 第二個真實家庭開始留下學習或獎勵資料。
+# 2. 班上其他學生 / 家長要直接使用同一套系統。
+# 3. 系統要讓外部使用者自行加入。
+# 4. 要公開家長提領或 Admin 破壞性操作。
+# 5. 任何情況要求「使用者不能冒用別人」成為正式安全保證。
 #
 # 舊版本保留在 Git history。
 
