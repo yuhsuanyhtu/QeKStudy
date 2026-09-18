@@ -1,6 +1,6 @@
 # SDD-002 — 家庭與孩子資料持久化 / Persistent Family & Child Data
 
-狀態 Status: Draft for TDD  
+狀態 Status: Approved for TDD  
 對應需求 Requirement: BDD-002  
 日期 Date: 2026-09-18
 
