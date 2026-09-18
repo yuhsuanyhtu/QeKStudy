@@ -188,17 +188,19 @@ Status: **Backlog — Deferred / Trigger-based**
 ### BDD-005 — 英文最小學習與獎勵閉環
 ### English Minimum Learning & Reward Loop
 
-狀態：**Deferred — 等待 BDD-004**
+狀態：**ACTIVE — SDD Draft**
 
-Status: **Deferred — waiting for BDD-004**
+Status: **ACTIVE — SDD Draft**
 
-BDD-005 的產品方向沒有取消，但需求已擴充：
-- 學習與獎勵紀錄要寫入 Google Sheet。
-- 學習獎勵要累積進 saving pool，並寫入 Google Sheet。
-- 真正的家長提領 / 發放是另一個家長頁流程，不在 BDD-005。
-- 第一個一般測驗仍維持中翻英。
+BDD-004 已 review，但完整 Authentication 延後。
+BDD-005 以單一家庭 / 單一學生受控版本繼續：
 
-因此現有 SDD-005 Draft 需要在 BDD-004 重新確認後重寫，現在不進 TDD。
+- 學習與獎勵紀錄寫入 Google Sheet。
+- 每筆紀錄保留 family_id / student_id。
+- 學習獎勵累積進 saving pool。
+- 真正家長提領 / payout 是後續獨立 Story。
+- 第一個一般測驗維持中翻英。
+- SDD-005 已重寫為 schema v3 + learning_events 設計。
 
 - 第一科固定從 **英文** 開始。
 - 第一版至少包含單字閃卡與一種真正可判定答對/答錯的測驗。
