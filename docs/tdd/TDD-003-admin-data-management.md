@@ -1,6 +1,6 @@
 # TDD-003 — 名稱維護與管理員資料管理 / Rename & Administrator Data Management
 
-狀態 Status: GREEN / REGRESSION 57/57 PASSED / DEPLOYMENT PENDING  
+狀態 Status: DONE / REGRESSION 57/57 PASSED  
 對應 BDD: BDD-003  
 對應 SDD: SDD-003  
 日期 Date: 2026-09-18
@@ -146,4 +146,4 @@ Green implementation includes:
 
 Schema migration v1 → v2 was applied after creating a full Google Sheet backup.
 
-BDD-003 is not Done yet because the Apps Script deployment still needs to be updated to the schema-v2 code and the parent rename UI requires manual deployed acceptance.
+Apps Script deployment was updated, parent rename UI acceptance passed, durable Sheet/audit verification succeeded, and BDD-003 is Done.

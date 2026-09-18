@@ -147,14 +147,22 @@ Current design:
 ### BDD-003 — 名稱維護與管理員資料管理
 ### Rename & Admin Data Management
 
-狀態：**Green — Regression 57/57 PASS / Deployment pending**
+狀態：**Done — Regression 57/57 PASS**
 
-Status: **Green — Regression 57/57 PASS / Deployment pending**
+Status: **Done — Regression 57/57 PASS**
 
 - 家長可修改自己家庭與孩子的顯示名稱。
 - 管理員可協助修改任何家庭與孩子的顯示名稱。
 - 只有管理員可執行資料刪除。
 - 一般家長仍不得跨家庭操作。
+- 管理員破壞性操作已在安全測試邊界驗證；正式登入前不暴露於公開 Demo。
+
+規格與驗收：
+
+- `docs/bdd/BDD-003-admin-data-management.feature`
+- `docs/sdd/SDD-003-admin-data-management.md`
+- `docs/tdd/TDD-003-admin-data-management.md`
+- `docs/acceptance/Acceptance-003-admin-data-management.md`
 
 ---
 

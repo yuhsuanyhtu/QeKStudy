@@ -1,6 +1,6 @@
 # SDD-003 — 名稱維護與管理員資料管理 / Rename & Administrator Data Management
 
-狀態 Status: Approved for TDD  
+狀態 Status: Implemented / BDD-003 Done  
 對應需求 Requirement: BDD-003  
 日期 Date: 2026-09-18
 

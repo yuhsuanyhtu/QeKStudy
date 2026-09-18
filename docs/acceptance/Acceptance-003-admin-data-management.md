@@ -1,6 +1,6 @@
 # Acceptance-003 — 名稱維護與管理員資料管理 / Rename & Administrator Data Management
 
-狀態 Status: Deployment + UI acceptance pending  
+狀態 Status: PASSED / DONE  
 日期 Date: 2026-09-18  
 BDD: BDD-003  
 SDD: SDD-003
@@ -45,10 +45,37 @@ Public deployed Demo must **not** show administrator delete controls.
 
 Administrator destructive behavior remains verified only in the safe automated test boundary until Authentication/Admin identity exists.
 
-## Done Gate
+## Acceptance Result / 驗收結果
 
-BDD-003 is Done after:
-- updated Apps Script deployment is live,
-- parent rename UI acceptance passes,
-- Sheet audit rows are verified,
-- final regression remains green.
+2026-09-18 使用者完成更新後的 Apps Script UI 驗收並回報「改名正常」。
+
+User completed the updated Apps Script UI acceptance and reported that renaming works correctly.
+
+Google Sheet verification after manual acceptance:
+
+- `schema_version = 2`
+- Family rename persisted:
+  - family_id remained `fam_81260843-3c93-48db-b39f-ea9329c50c24`
+  - owner_parent_id remained `parent-a`
+  - display name changed from `謙恩的家` to `寶貝的家`
+- Student rename persisted:
+  - student_id remained `stu_92460227-1286-4d64-8f0c-1364794a860d`
+  - family_id remained `fam_81260843-3c93-48db-b39f-ea9329c50c24`
+  - display name changed from `小米` to `小愛`
+- `audit_log` contains:
+  - `RENAME_FAMILY` by `parent-a`
+  - `RENAME_STUDENT` by `parent-a`
+- Existing family/student relationships remain intact.
+- Public UI continues to omit administrator destructive controls.
+
+Administrator rename/delete/soft-delete behavior remains verified in the safe automated test boundary until production Authentication/Admin identity exists.
+
+Final regression basis:
+- GitHub Actions run `35312578717`
+- Total: 57
+- Passed: 57
+- Failed: 0
+
+BDD-003 acceptance passed and the Story is **Done**.
+
+BDD-003 驗收完成，Story 正式 **Done**。
