@@ -188,11 +188,11 @@ Status: **Backlog — Deferred / Trigger-based**
 ### BDD-005 — 英文最小學習與獎勵閉環
 ### English Minimum Learning & Reward Loop
 
-狀態：**ACTIVE — BDD Draft**
+狀態：**ACTIVE — BDD Approved**
 
-Status: **ACTIVE — BDD Draft**
+Status: **ACTIVE — BDD Approved**
 
-BDD 已重寫，目前仍為 **DRAFT、尚未進 SDD**。
+BDD-005 已確認。下一步依 Agile 流程進入 **SDD-005**；目前尚未開始設計或 coding。
 
 - 第一科固定從 **英文** 開始。
 - 第一版至少包含單字閃卡與一種真正可判定答對/答錯的測驗。
