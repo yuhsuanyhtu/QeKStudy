@@ -526,3 +526,20 @@ The first version should remain small and manually curated. The exact round comp
 這個決策是刻意的產品取捨：
 
 > 先驗證學習價值，但不把目前公開 Demo 誤稱為安全多人系統。
+
+
+## 18. 題庫不寫死在 Apps Script / Repo-backed Content
+
+2026-09-18 使用者在首次部署時指出：題目若放在 `EnglishContent.gs`，每次改題都必須重新部署 Apps Script，這不符合內容快速迭代需求。
+
+決策：
+
+- 英文教材與題目 source of truth 改為 `data/english/catalog.json`。
+- Apps Script 用 UrlFetchApp 讀取 repo main branch 的 catalog。
+- 一般單字 / 題目 / 複習方向 / source metadata 更新只改 repo JSON。
+- lesson / word / question 都帶 revision；實質內容修改要升 revision。
+- learning event 的 content_id 使用 `id@revision`，source_ref 保留 catalogVersion。
+- `EnglishContent.gs` 移除。
+- Browser 只送答案或 flashcard exposure；server 自己判分、算 reward、寫 Sheet，不能讓 browser 自行指定 reward_amount。
+
+這樣「內容迭代」與「程式部署」正式分離。

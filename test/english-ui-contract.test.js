@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 
 async function readEnglishHtml() {
   return readFile(
@@ -38,4 +39,21 @@ test('TDD-005-UI-04 result UI includes first-try, retry, unresolved and review i
 test('TDD-005-UI-05 English page does not expose a student-id selector', async () => {
   const html = await readEnglishHtml();
   assert.equal(/name=["']studentId["']|id=["']student-id["']|data-student-id/i.test(html), false);
+});
+
+
+test('TDD-005-UI-06 English HTML has one complete document and no trailing duplicated content', async () => {
+  const html = await readEnglishHtml();
+  assert.equal((html.match(/<html\b/gi) || []).length, 1);
+  assert.equal((html.match(/<\/html>/gi) || []).length, 1);
+  assert.equal((html.match(/<script\b/gi) || []).length, 1);
+  assert.equal((html.match(/<\/script>/gi) || []).length, 1);
+  assert.match(html, /<\/html>\s*$/);
+});
+
+test('TDD-005-UI-07 English inline JavaScript is syntactically valid', async () => {
+  const html = await readEnglishHtml();
+  const match = html.match(/<script>([\s\S]*?)<\/script>/i);
+  assert.ok(match);
+  assert.doesNotThrow(() => new vm.Script(match[1]));
 });

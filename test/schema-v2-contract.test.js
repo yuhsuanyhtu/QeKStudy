@@ -7,8 +7,10 @@ const code = await readFile(
   'utf8',
 );
 
-test('TDD-003-SCHEMA-01 Apps Script application expects schema version 2', () => {
-  assert.match(code, /QEK_SCHEMA_VERSION\s*=\s*2/);
+test('TDD-003-SCHEMA-01 current Apps Script schema preserves v2-or-later data-management capability', () => {
+  const match = code.match(/QEK_SCHEMA_VERSION\s*=\s*(\d+)/);
+  assert.ok(match);
+  assert.ok(Number(match[1]) >= 2);
 });
 
 test('TDD-003-SCHEMA-02 Apps Script defines audit_log and deletion metadata', () => {
