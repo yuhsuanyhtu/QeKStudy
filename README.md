@@ -115,9 +115,9 @@ Completed:
 ### BDD-002 — 家庭與孩子資料持久化
 ### Persistent Family & Child Data
 
-狀態：**BDD / SDD 已確認，下一步 TDD**
+狀態：**Green / Regression 28/28 PASS / UI acceptance pending**
 
-Status: **BDD / SDD approved, TDD next**
+Status: **Green / Regression 28/28 PASS / UI acceptance pending**
 
 目前設計：
 
@@ -146,11 +146,15 @@ Current design:
 
 ## Demo / 驗收畫面
 
-目前 BDD-001 的 GitHub Pages Demo：
+目前 Demo：
 
 https://yuhsuanyhtu.github.io/QeKStudy/
 
-The current GitHub Pages demo is for BDD-001 acceptance.
+BDD-002 Apps Script persistence demo:
+
+https://script.google.com/macros/s/AKfycbwaGdC88YUhlRjYmM1znhMqs4fpEYhnJ2cNkQhEa-EsKccjPzb7PshR2STbqZ6z5IUh2w/exec
+
+BDD-001 GitHub Pages demo remains available. BDD-002 persistence uses the Apps Script demo below.
 
 目前畫面中的「家長 A / 家長 B」是 **開發驗收用模擬身份**，不是正式登入。
 
