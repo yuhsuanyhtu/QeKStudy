@@ -1,7 +1,7 @@
 # TDD-005 — 英文最小學習與獎勵閉環
 # English Minimum Learning & Reward Loop
 
-狀態 Status: **GREEN — 95/95 PASS；尚未完成部署驗收 / deployment acceptance pending**  
+狀態 Status: **GREEN — 97/97 PASS；尚未完成部署驗收 / deployment acceptance pending**  
 對應 BDD: **BDD-005 APPROVED**  
 對應 SDD: **SDD-005 APPROVED**  
 日期 Date: **2026-09-18**
@@ -284,3 +284,16 @@ Verification run: `35347222085`
 - Fail: **0**
 
 一般題目內容修改只需要改 repo JSON，不需要重新 deploy Apps Script。
+
+
+### Reward config safety follow-up
+
+使用者尚未確認實際零用金數字，因此 production-like Demo config 不得自行猜值。
+
+- `EnglishRewardConfig.gs` 目前 `configured: false`
+- daily cap / flashcard amount / difficulty amounts 尚未啟用
+- 學習與作答仍可寫 learning_events
+- reward_amount 暫時為 0
+- UI 清楚顯示「零用金規則尚未設定」
+
+Verification run: `35347546883` — **97/97 PASS**
