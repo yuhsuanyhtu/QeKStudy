@@ -1,16 +1,19 @@
 const QEK_SPREADSHEET_ID = '16GjrllU2rRgUBXH7evGQCFqOTHQbhtJRFX6CjkvKBA8';
-const QEK_SCHEMA_VERSION = 2;
+const QEK_SCHEMA_VERSION = 3;
 const QEK_SHEETS = {
   families: 'families',
   students: 'students',
   meta: 'schema_meta',
   audit: 'audit_log',
+  learning: 'learning_events',
 };
 
-function doGet() {
-  return HtmlService.createTemplateFromFile('Index')
+function doGet(e) {
+  const view = e && e.parameter ? String(e.parameter.view || '') : '';
+  const isEnglish = view.toLowerCase() === 'english';
+  return HtmlService.createTemplateFromFile(isEnglish ? 'English' : 'Index')
     .evaluate()
-    .setTitle('QeKStudy · Persistence Demo');
+    .setTitle(isEnglish ? 'QeKStudy · English' : 'QeKStudy · Persistence Demo');
 }
 
 function apiBootstrap(parentId) {
@@ -457,4 +460,143 @@ function qekError_(code) {
   const error = new Error(code);
   error.code = code;
   return error;
+}
+
+
+function controlledStudent_() {
+  const studentId = PropertiesService.getScriptProperties()
+    .getProperty('QEK_CONTROLLED_STUDENT_ID');
+  if (!studentId) throw qekError_('CONTROLLED_STUDENT_NOT_CONFIGURED');
+
+  const row = findStudentRow_(studentId);
+  if (!row || row.status !== 'active') {
+    throw qekError_('RESOURCE_NOT_AVAILABLE');
+  }
+
+  return {
+    studentId: String(row.student_id),
+    familyId: String(row.family_id),
+    displayName: String(row.display_name),
+  };
+}
+
+function listLearningEventsForStudent_(studentId) {
+  return readObjects_(QEK_SHEETS.learning)
+    .filter(function(row) {
+      return String(row.student_id) === String(studentId);
+    })
+    .map(function(row) {
+      return {
+        learningEventId: String(row.learning_event_id),
+        occurredAt: String(row.occurred_at),
+        familyId: String(row.family_id),
+        studentId: String(row.student_id),
+        subject: String(row.subject),
+        sessionId: String(row.session_id),
+        eventType: String(row.event_type),
+        lessonId: String(row.lesson_id),
+        contentId: String(row.content_id),
+        questionSourceType: String(row.question_source_type),
+        attemptNo: row.attempt_no === '' ? '' : Number(row.attempt_no),
+        correct: row.correct === '' ? '' : String(row.correct).toLowerCase() === 'true',
+        firstAttemptCorrect: row.first_attempt_correct === '' ? '' : String(row.first_attempt_correct).toLowerCase() === 'true',
+        rewardAmount: Number(row.reward_amount) || 0,
+        reviewTarget: String(row.review_target || ''),
+        sourceRef: String(row.source_ref || ''),
+        note: String(row.note || ''),
+      };
+    });
+}
+
+function calculateSavingPool_(events) {
+  return (events || []).reduce(function(sum, event) {
+    return sum + Math.max(0, Number(event.rewardAmount) || 0);
+  }, 0);
+}
+
+function calculateDailySubjectEarned_(events, subject, dateString) {
+  return (events || []).reduce(function(sum, event) {
+    const eventDate = String(event.occurredAt || '').slice(0, 10);
+    if (event.subject === subject && eventDate === dateString) {
+      return sum + Math.max(0, Number(event.rewardAmount) || 0);
+    }
+    return sum;
+  }, 0);
+}
+
+function appendLearningEvent_(event) {
+  appendRow_(QEK_SHEETS.learning, [
+    event.learningEventId,
+    event.occurredAt,
+    event.familyId,
+    event.studentId,
+    event.subject,
+    event.sessionId,
+    event.eventType,
+    event.lessonId,
+    event.contentId,
+    event.questionSourceType,
+    event.attemptNo,
+    event.correct,
+    event.firstAttemptCorrect,
+    event.rewardAmount,
+    event.reviewTarget,
+    event.sourceRef,
+    event.note,
+  ]);
+}
+
+function apiEnglishBootstrap() {
+  return apiResult_(function() {
+    ensureSchema_();
+    const student = controlledStudent_();
+    const events = listLearningEventsForStudent_(student.studentId);
+    const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
+    return {
+      student: student,
+      savingPool: calculateSavingPool_(events),
+      todayEnglishEarned: calculateDailySubjectEarned_(events, 'ENGLISH', today),
+      lesson: getEnglishLesson_(),
+      quiz: getEnglishQuiz_(),
+      dailyCap: getEnglishRewardConfig_().dailyCap,
+    };
+  });
+}
+
+function apiEnglishRecordLearningEvent(input) {
+  return apiResult_(function() {
+    ensureSchema_();
+    const student = controlledStudent_();
+    const now = new Date().toISOString();
+    const event = {
+      learningEventId: 'learn_' + Utilities.getUuid(),
+      occurredAt: now,
+      familyId: student.familyId,
+      studentId: student.studentId,
+      subject: 'ENGLISH',
+      sessionId: String(input && input.sessionId || ''),
+      eventType: String(input && input.eventType || ''),
+      lessonId: String(input && input.lessonId || ''),
+      contentId: String(input && input.contentId || ''),
+      questionSourceType: String(input && input.questionSourceType || ''),
+      attemptNo: input && input.attemptNo != null ? Number(input.attemptNo) : '',
+      correct: input && input.correct != null ? Boolean(input.correct) : '',
+      firstAttemptCorrect: input && input.firstAttemptCorrect != null ? Boolean(input.firstAttemptCorrect) : '',
+      rewardAmount: Math.max(0, Number(input && input.rewardAmount) || 0),
+      reviewTarget: String(input && input.reviewTarget || ''),
+      sourceRef: String(input && input.sourceRef || ''),
+      note: String(input && input.note || ''),
+    };
+
+    withScriptLock_(function() {
+      appendLearningEvent_(event);
+      SpreadsheetApp.flush();
+    });
+
+    const events = listLearningEventsForStudent_(student.studentId);
+    return {
+      event: event,
+      savingPool: calculateSavingPool_(events),
+    };
+  });
 }
