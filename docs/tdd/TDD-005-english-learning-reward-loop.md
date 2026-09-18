@@ -1,7 +1,7 @@
 # TDD-005 — 英文最小學習與獎勵閉環
 # English Minimum Learning & Reward Loop
 
-狀態 Status: **GREEN — 90/90 PASS；尚未完成部署驗收 / deployment acceptance pending**  
+狀態 Status: **GREEN — 95/95 PASS；尚未完成部署驗收 / deployment acceptance pending**  
 對應 BDD: **BDD-005 APPROVED**  
 對應 SDD: **SDD-005 APPROVED**  
 日期 Date: **2026-09-18**
@@ -248,4 +248,39 @@ Green 代表 repo contracts 通過，不代表 Story Done。
 8. Full regression + UI/BDD acceptance。
 
 **English:**  
-TDD-005 is Green at 90/90, but deployment and real Google Sheet/UI acceptance are still pending.
+TDD-005 is Green at 95/95, but deployment and real Google Sheet/UI acceptance are still pending.
+
+
+---
+
+## 8. Repo-backed Content Architecture / 題庫外部化
+
+使用者在部署前發現題目不應寫死在 `EnglishContent.gs`。
+
+因此補上 5 個 architecture contracts：
+
+34. English content source of truth 是 `data/english/catalog.json`
+35. lesson / word / question 都有明確 revision
+36. 未完成驗證的 CAP placeholder 必須 inactive
+37. Apps Script 用 UrlFetchApp 從 repo 讀 catalog
+38. Browser 不得呼叫可自行指定 rewardAmount 的通用 learning-event API
+
+實作調整：
+
+- 刪除 `apps-script/EnglishContent.gs`
+- 新增 `apps-script/EnglishLogic.gs`
+- 新增 `data/english/catalog.json`
+- `English.html` 只送答案與 exposure 資料
+- server 自己載入 repo 題目、判分、算 reward、寫 learning_events
+- content_id 使用 `id@revision`
+- source_ref 保留 catalogVersion
+
+Verification run: `35347222085`
+
+結果：
+
+- Total: **95**
+- Pass: **95**
+- Fail: **0**
+
+一般題目內容修改只需要改 repo JSON，不需要重新 deploy Apps Script。
