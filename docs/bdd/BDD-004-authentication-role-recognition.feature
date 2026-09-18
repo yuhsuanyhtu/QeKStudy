@@ -1,33 +1,72 @@
 # language: zh-TW
 # QeKStudy BDD-004
-# 中文：使用者登入與角色辨識
-# English: User authentication and role recognition
-# Status: DEFERRED / TRIGGER-BASED BACKLOG
-# Deferred reason: prioritize controlled demo learning-value validation before full authentication.
-# Pickup triggers are tracked in docs/STATUS.md.
+# 中文：使用者登入、學生身分與角色辨識
+# English: Authentication, learner identity, and role recognition
+# Status: ACTIVE / BDD RE-REVIEW DRAFT
+#
+# 2026-09-18 重新撿回原因：
+# BDD-005 已確認要把真實學習紀錄與獎勵寫入 Google Sheet，
+# 並且要讓家長真正確認零用金發放。
+# 這符合原本的 BDD-004 pickup trigger，因此不能再維持 Deferred。
+#
+# 舊版本保留在 Git history。
 
-功能: 使用者登入與角色辨識
-  為了讓家庭資料與管理員功能只被正確的人使用
+功能: 使用者登入、學生身分與角色辨識
+  為了讓學習紀錄、家庭資料和零用金只被正確的人使用
   作為 QeKStudy 使用者
-  我希望系統能可靠辨識我的身份與角色
-  以便我只能取得被授權的家庭資料與操作能力
+  我希望系統能可靠知道我是誰、我是家長還是學生
+  讓每個人只能看到與操作自己被授權的資料
 
-  場景: 未登入使用者不能存取家庭私人資料
+  場景: 未登入使用者不能讀寫私人資料
     假設 使用者尚未登入
-    當 使用者開啟 QeKStudy
-    那麼 系統應要求使用者登入
-    而且 不應顯示任何家庭私人資料
-    而且 不應允許建立、修改或刪除家庭與孩子資料
+    當 使用者開啟需要私人資料的功能
+    那麼 系統應要求登入
+    而且 不應顯示家庭私人資料
+    而且 不應顯示真實學生的學習紀錄或零用金資料
+    而且 不應允許修改家庭、學習紀錄或零用金資料
 
-  場景: 已登記家長登入後取得自己的家長身份
-    假設 某個登入帳號已被 QeKStudy 登記為家長 A
+  場景: 家長登入後系統知道是哪一位家長
+    假設 某個登入帳號已被登記為家長 A
     當 該帳號成功登入
     那麼 系統應辨識目前使用者為家長 A
     而且 角色應為 PARENT
-    而且 系統只能載入家長 A 被授權的家庭資料
+    而且 只能載入家長 A 被授權的家庭與孩子資料
+
+  場景: 學生使用系統時必須能對應到正確的學生
+    假設 某個已授權的登入身份對應到學生 A
+    當 學生 A 進入學習功能
+    那麼 系統應知道目前正在學習的是學生 A
+    而且 學習紀錄應寫入學生 A
+    而且 不應寫入其他學生
+
+  場景: 學生不能冒用其他學生
+    假設 系統目前辨識正在學習的是學生 A
+    而且 學生 B 的 studentId 已被知道或猜到
+    當 瀏覽器嘗試把 studentId 改成學生 B
+    那麼 系統仍應以可信任的登入身分判定目前學生
+    而且 不應讀取或寫入學生 B 的私人學習紀錄
+
+  場景: 學生不能自行變成家長或管理員
+    假設 系統目前辨識使用者為 STUDENT
+    當 瀏覽器傳入 PARENT、ADMIN、parentId、adminId 或其他角色參數
+    那麼 系統仍應把該使用者視為 STUDENT
+    而且 不應提供家長或管理員專用權限
+
+  場景: 家長只能看到自己家庭孩子的學習與零用金資料
+    假設 家長 A 已登入
+    當 家長 A 查看孩子的學習與零用金資料
+    那麼 系統只能回傳家長 A 被授權家庭中的孩子資料
+    而且 不應回傳其他家庭孩子的資料
+
+  場景: 只有被授權的家長可以確認零用金發放
+    假設 學生 A 有待領零用金
+    當 有人要把待領零用金標記為已發放
+    那麼 系統應確認目前登入者是學生 A 所屬家庭中有權限的家長
+    而且 STUDENT 不應能自行確認發放
+    而且 其他家庭的家長不應能確認發放
 
   場景: 已登記管理員登入後取得管理員身份
-    假設 某個登入帳號已被 QeKStudy 登記為管理員
+    假設 某個登入帳號已被登記為管理員
     當 該帳號成功登入
     那麼 系統應辨識目前使用者為該管理員
     而且 角色應為 ADMIN
@@ -47,43 +86,51 @@
     而且 不應回傳家長 B 的家庭私人資料
     而且 不應允許家長 A 操作家長 B 的家庭
 
-  場景: 同一帳號重新開啟或換裝置登入後身份保持一致
-    假設 某帳號已被登記為家長 A
+  場景: 同一帳號換裝置登入後身份保持一致
+    假設 某帳號已被登記為特定家長、學生或管理員
     當 該帳號在另一個瀏覽器或裝置成功登入
-    那麼 系統仍應辨識為同一個家長 A
-    而且 角色仍應為 PARENT
-    而且 應載入相同的被授權家庭資料
+    那麼 系統仍應辨識為同一個內部身份
+    而且 應取得相同的角色與授權範圍
 
-  場景: 未登記帳號登入後不能取得家庭或管理員權限
+  場景: 未登記帳號登入後不能取得私人權限
     假設 某個登入帳號尚未被 QeKStudy 登記
     當 該帳號成功完成外部登入
-    那麼 QeKStudy 不應自動賦予 PARENT 或 ADMIN 權限
-    而且 不應顯示任何家庭私人資料
+    那麼 QeKStudy 不應自動賦予 PARENT、STUDENT 或 ADMIN 權限
+    而且 不應顯示任何家庭、學習或零用金私人資料
     而且 應清楚告知此帳號尚未被授權使用
 
   場景: 登出後私人操作立即失效
-    假設 使用者已登入並可存取家庭資料
+    假設 使用者已登入
     當 使用者登出
     那麼 系統應清除目前登入狀態
-    而且 後續家庭私人資料讀寫應要求重新登入
-    而且 不應沿用登出前的 PARENT 或 ADMIN 權限
+    而且 後續私人資料讀寫應要求重新登入
+    而且 不應沿用登出前的角色與權限
 
-  場景: Authentication 失敗時不得建立半登入狀態
+  場景: 登入失敗時不得建立半登入狀態
     當 登入流程失敗或身份驗證結果無法確認
     那麼 系統不應把使用者視為已登入
-    而且 不應載入私人家庭資料
-    而且 不應提供 PARENT 或 ADMIN 專用功能
+    而且 不應載入家庭、學習或零用金私人資料
+    而且 不應提供 PARENT、STUDENT 或 ADMIN 專用功能
 
-# Acceptance notes / 驗收補充
-# 1. BDD-004 定義「登入身份與角色授權行為」，不在此需求綁定 Google OAuth、
-#    Apps Script Session、Firebase Auth 或其他特定技術。
-#    BDD-004 defines authentication/authorization behavior without choosing a provider.
-# 2. role / parentId / adminId 必須由可信任的 server-side identity mapping 決定，
-#    不得相信 browser 自行提供的值。
-#    Roles and internal actor IDs must come from trusted server-side identity mapping.
-# 3. BDD-001 的家庭隔離、BDD-002 的持久化、BDD-003 的 Parent/Admin 權限都必須繼續成立。
-#    BDD-001 isolation, BDD-002 persistence, and BDD-003 permissions remain mandatory.
-# 4. 未登記帳號不自動註冊成家長；帳號註冊/邀請流程若需要，另開 Story。
-#    Unknown accounts are not auto-promoted to parents; registration/invitation is a separate story.
-# 5. 一個登入帳號是否可對應多個家庭或多個角色，若未來需要再由獨立 Story 擴充。
-#    Multi-family or multi-role account behavior is intentionally deferred.
+# 驗收補充 / Acceptance notes
+#
+# 1. BDD-004 只定義「系統必須可靠知道目前是誰、角色是什麼、可以操作哪些資料」。
+#    Google OAuth、Firebase Auth、Apps Script 身分等技術留到 SDD-004 決定。
+#
+# 2. PARENT / STUDENT / ADMIN、parentId / studentId / adminId
+#    都必須由可信任的 server-side identity mapping 決定，
+#    不能相信 browser 自己送上來的角色或 ID。
+#
+# 3. BDD-001 的家庭隔離、BDD-002 的持久化、BDD-003 的 Parent/Admin 權限仍要成立。
+#
+# 4. 「零用金發放」在目前產品語意是：
+#    學習產生待領零用金 → 被授權家長確認已實際發給孩子 → 系統留下發放紀錄。
+#    本產品不是銀行轉帳或支付平台。
+#
+# 5. 帳號怎麼註冊、邀請學生與家長、是否一個帳號可對應多個角色，
+#    如果需要更複雜行為，再另開 Story。
+#
+# English summary:
+# BDD-004 is re-opened because BDD-005 now requires real persisted learning/reward data and
+# parent-confirmed allowance payout. The trusted identity model must now cover STUDENT as well as
+# PARENT and ADMIN, and browser-supplied IDs/roles must never grant access.
