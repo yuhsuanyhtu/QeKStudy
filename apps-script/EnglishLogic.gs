@@ -2,12 +2,27 @@ function englishCatalogUrl_() {
   return 'https://yuhsuanyhtu.github.io/QeKStudy/data/english/catalog.json';
 }
 
+
 function loadEnglishCatalog_() {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'qek:english:catalog:v1';
+  const cached = cache.get(cacheKey);
+
+  if (cached) {
+    try {
+      const cachedCatalog = JSON.parse(cached);
+      validateEnglishCatalog_(cachedCatalog);
+      return cachedCatalog;
+    } catch (error) {
+      cache.remove(cacheKey);
+    }
+  }
+
   let response;
   try {
     response = UrlFetchApp.fetch(englishCatalogUrl_(), {
       muteHttpExceptions: true,
-      headers: { 'Cache-Control': 'no-cache' },
+      followRedirects: true,
     });
   } catch (error) {
     throw qekError_('CONTENT_NOT_AVAILABLE');
@@ -17,14 +32,16 @@ function loadEnglishCatalog_() {
     throw qekError_('CONTENT_HTTP_' + response.getResponseCode());
   }
 
+  const body = response.getContentText();
   let catalog;
   try {
-    catalog = JSON.parse(response.getContentText());
+    catalog = JSON.parse(body);
   } catch (error) {
     throw qekError_('CONTENT_INVALID');
   }
 
   validateEnglishCatalog_(catalog);
+  cache.put(cacheKey, body, 60);
   return catalog;
 }
 
@@ -237,13 +254,17 @@ function apiEnglishBootstrap() {
   });
 }
 
+
 function apiEnglishSubmitAnswer(input) {
   return apiResult_(function() {
     ensureSchema_();
+
     const sessionId = String(input && input.sessionId || '');
     const questionId = String(input && input.questionId || '');
     const revision = Number(input && input.revision);
-    if (!sessionId || !questionId || !revision) throw qekError_('ANSWER_REQUIRED');
+    if (!sessionId || !questionId || !revision) {
+      throw qekError_('ANSWER_REQUIRED');
+    }
 
     const student = controlledStudent_();
     const catalog = loadEnglishCatalog_();
@@ -255,93 +276,109 @@ function apiEnglishSubmitAnswer(input) {
     if (!question) throw qekError_('CONTENT_NOT_AVAILABLE');
 
     const contentId = contentKey_(question.questionId, question.revision);
-    const events = listLearningEventsForStudent_(student.studentId);
-    const attempts = currentSessionAttempts_(events, contentId, sessionId);
-    const attemptNo = attempts.length + 1;
     const correct = evaluateQuestion_(question, input);
-    const firstAttemptCorrect = attempts.length
-      ? Boolean(attempts[0].firstAttemptCorrect)
-      : correct;
-
-    let rewardAmount = 0;
     const config = getEnglishRewardConfig_();
-    if (
-      correct &&
-      config.configured === true &&
-      !currentSessionAlreadyRewarded_(events, contentId, sessionId)
-    ) {
-      const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-      const todayEarned = calculateDailySubjectEarned_(events, 'ENGLISH', today);
-      const previousSuccessCount = previousSuccessfulContentCount_(
-        events,
-        contentId,
-        sessionId
+
+    return withScriptLock_(function() {
+      const events = listLearningEventsForStudent_(student.studentId);
+      const attempts = currentSessionAttempts_(events, contentId, sessionId);
+      const attemptNo = attempts.length + 1;
+      const firstAttemptCorrect = attempts.length
+        ? Boolean(attempts[0].firstAttemptCorrect)
+        : correct;
+
+      let rewardAmount = 0;
+      const today = Utilities.formatDate(
+        new Date(),
+        'Asia/Taipei',
+        'yyyy-MM-dd'
       );
-      rewardAmount = calculateEnglishReward_({
-        baseAmount: config.difficultyBase[question.difficulty] || 0,
+
+      if (
+        correct &&
+        config.configured === true &&
+        !currentSessionAlreadyRewarded_(events, contentId, sessionId)
+      ) {
+        const todayEarned = calculateDailySubjectEarned_(
+          events,
+          'ENGLISH',
+          today
+        );
+        const previousSuccessCount = previousSuccessfulContentCount_(
+          events,
+          contentId,
+          sessionId
+        );
+
+        rewardAmount = calculateEnglishReward_({
+          baseAmount: config.difficultyBase[question.difficulty] || 0,
+          attemptNo: attemptNo,
+          previousSuccessCount: previousSuccessCount,
+          todayEarned: todayEarned,
+          config: config,
+        });
+      }
+
+      const event = {
+        learningEventId: 'learn_' + Utilities.getUuid(),
+        occurredAt: new Date().toISOString(),
+        familyId: student.familyId,
+        studentId: student.studentId,
+        subject: 'ENGLISH',
+        sessionId: sessionId,
+        eventType: 'ANSWER_ATTEMPT',
+        lessonId: '',
+        contentId: contentId,
+        questionSourceType: question.sourceType,
         attemptNo: attemptNo,
-        previousSuccessCount: previousSuccessCount,
-        todayEarned: todayEarned,
-        config: config,
-      });
-    }
+        correct: correct,
+        firstAttemptCorrect: firstAttemptCorrect,
+        rewardAmount: rewardAmount,
+        reviewTarget: correct ? '' : question.reviewTarget,
+        sourceRef: sourceRefForQuestion_(catalog, question),
+        note: '',
+      };
 
-    const event = {
-      learningEventId: 'learn_' + Utilities.getUuid(),
-      occurredAt: new Date().toISOString(),
-      familyId: student.familyId,
-      studentId: student.studentId,
-      subject: 'ENGLISH',
-      sessionId: sessionId,
-      eventType: 'ANSWER_ATTEMPT',
-      lessonId: '',
-      contentId: contentId,
-      questionSourceType: question.sourceType,
-      attemptNo: attemptNo,
-      correct: correct,
-      firstAttemptCorrect: firstAttemptCorrect,
-      rewardAmount: rewardAmount,
-      reviewTarget: correct ? '' : question.reviewTarget,
-      sourceRef: sourceRefForQuestion_(catalog, question),
-      note: '',
-    };
-
-    withScriptLock_(function() {
       appendLearningEvent_(event);
       SpreadsheetApp.flush();
-    });
 
-    const updatedEvents = listLearningEventsForStudent_(student.studentId);
-    const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-    return {
-      correct: correct,
-      attemptNo: attemptNo,
-      firstAttemptCorrect: firstAttemptCorrect,
-      rewardAmount: rewardAmount,
-      reviewTarget: correct ? '' : question.reviewTarget,
-      rewardConfigured: config.configured === true,
-      savingPool: calculateSavingPool_(updatedEvents),
-      todayEnglishEarned: calculateDailySubjectEarned_(
-        updatedEvents,
-        'ENGLISH',
-        today
-      ),
-    };
+      const updatedEvents = events.concat([event]);
+
+      return {
+        correct: correct,
+        attemptNo: attemptNo,
+        firstAttemptCorrect: firstAttemptCorrect,
+        rewardAmount: rewardAmount,
+        reviewTarget: correct ? '' : question.reviewTarget,
+        rewardConfigured: config.configured === true,
+        savingPool: calculateSavingPool_(updatedEvents),
+        todayEnglishEarned: calculateDailySubjectEarned_(
+          updatedEvents,
+          'ENGLISH',
+          today
+        ),
+      };
+    });
   });
 }
+
 
 function apiEnglishCompleteFlashcards(input) {
   return apiResult_(function() {
     ensureSchema_();
+
     const sessionId = String(input && input.sessionId || '');
     const lessonId = String(input && input.lessonId || '');
     const revision = Number(input && input.revision);
     const exposureByWordId = (input && input.exposureByWordId) || {};
-    if (!sessionId || !lessonId || !revision) throw qekError_('CONTENT_INVALID');
+    if (!sessionId || !lessonId || !revision) {
+      throw qekError_('CONTENT_INVALID');
+    }
 
     const student = controlledStudent_();
     const catalog = loadEnglishCatalog_();
     const lesson = catalog.lesson;
+
     if (
       lesson.lessonId !== lessonId ||
       Number(lesson.revision) !== revision
@@ -355,27 +392,53 @@ function apiEnglishCompleteFlashcards(input) {
     if (!complete) throw qekError_('FLASHCARD_NOT_COMPLETE');
 
     const contentId = contentKey_(lesson.lessonId, lesson.revision);
-    const events = listLearningEventsForStudent_(student.studentId);
-    const alreadyRewarded = events.some(function(event) {
-      return (
-        event.eventType === 'FLASHCARD_COMPLETE' &&
-        event.contentId === contentId &&
-        String(event.sessionId || '') === sessionId
-      );
-    });
-
     const config = getEnglishRewardConfig_();
-    const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-    const todayEarned = calculateDailySubjectEarned_(events, 'ENGLISH', today);
-    const rewardAmount =
-      alreadyRewarded || config.configured !== true
-        ? 0
-        : Math.min(
-            Math.max(0, Number(config.flashcardLessonCompletion) || 0),
-            Math.max(0, Number(config.dailyCap) - todayEarned)
-          );
 
-    if (!alreadyRewarded) {
+    return withScriptLock_(function() {
+      const events = listLearningEventsForStudent_(student.studentId);
+      const alreadyCompleted = events.some(function(event) {
+        return (
+          event.eventType === 'FLASHCARD_COMPLETE' &&
+          event.contentId === contentId &&
+          String(event.sessionId || '') === sessionId
+        );
+      });
+
+      const today = Utilities.formatDate(
+        new Date(),
+        'Asia/Taipei',
+        'yyyy-MM-dd'
+      );
+      const todayEarned = calculateDailySubjectEarned_(
+        events,
+        'ENGLISH',
+        today
+      );
+
+      if (alreadyCompleted) {
+        return {
+          complete: true,
+          rewardAmount: 0,
+          rewardConfigured: config.configured === true,
+          savingPool: calculateSavingPool_(events),
+          todayEnglishEarned: todayEarned,
+        };
+      }
+
+      const rewardAmount =
+        config.configured !== true
+          ? 0
+          : Math.min(
+              Math.max(
+                0,
+                Number(config.flashcardLessonCompletion) || 0
+              ),
+              Math.max(
+                0,
+                Number(config.dailyCap) - todayEarned
+              )
+            );
+
       const event = {
         learningEventId: 'learn_' + Utilities.getUuid(),
         occurredAt: new Date().toISOString(),
@@ -396,27 +459,25 @@ function apiEnglishCompleteFlashcards(input) {
         note: 'all_words_visible_at_least_1000ms',
       };
 
-      withScriptLock_(function() {
-        appendLearningEvent_(event);
-        SpreadsheetApp.flush();
-      });
-    }
+      appendLearningEvent_(event);
+      SpreadsheetApp.flush();
 
-    const updatedEvents = listLearningEventsForStudent_(student.studentId);
-    return {
-      complete: true,
-      rewardAmount: rewardAmount,
-      rewardConfigured: config.configured === true,
-      savingPool: calculateSavingPool_(updatedEvents),
-      todayEnglishEarned: calculateDailySubjectEarned_(
-        updatedEvents,
-        'ENGLISH',
-        today
-      ),
-    };
+      const updatedEvents = events.concat([event]);
+
+      return {
+        complete: true,
+        rewardAmount: rewardAmount,
+        rewardConfigured: config.configured === true,
+        savingPool: calculateSavingPool_(updatedEvents),
+        todayEnglishEarned: calculateDailySubjectEarned_(
+          updatedEvents,
+          'ENGLISH',
+          today
+        ),
+      };
+    });
   });
 }
-
 
 function apiEnglishContentDiagnostic() {
   const url = englishCatalogUrl_();
