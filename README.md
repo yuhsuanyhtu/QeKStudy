@@ -194,7 +194,8 @@ Status: **Deferred — waiting for BDD-004**
 
 BDD-005 的產品方向沒有取消，但需求已擴充：
 - 學習與獎勵紀錄要寫入 Google Sheet。
-- 零用金要進入「待領 → 家長確認發放 → 已發放紀錄」流程。
+- 學習獎勵要累積進 saving pool，並寫入 Google Sheet。
+- 真正的家長提領 / 發放是另一個家長頁流程，不在 BDD-005。
 - 第一個一般測驗仍維持中翻英。
 
 因此現有 SDD-005 Draft 需要在 BDD-004 重新確認後重寫，現在不進 TDD。
