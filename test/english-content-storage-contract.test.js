@@ -46,7 +46,7 @@ test('TDD-005-CONTENT-03 unfinished CAP placeholder cannot enter active student 
 });
 
 test('TDD-005-CONTENT-04 Apps Script fetches catalog from repo instead of hardcoding questions', () => {
-  assert.match(logic, /raw\.githubusercontent\.com\/yuhsuanyhtu\/QeKStudy\/main\/data\/english\/catalog\.json/);
+  assert.match(logic, /yuhsuanyhtu\.github\.io\/QeKStudy\/data\/english\/catalog\.json/);
   assert.match(logic, /UrlFetchApp\.fetch/);
   assert.match(logic, /catalogVersion/);
 });
