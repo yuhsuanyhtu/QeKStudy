@@ -17,6 +17,7 @@
     form { display:grid; gap:10px; }
     .row { display:flex; gap:8px; flex-wrap:wrap; }
     .family { border-top:1px solid #edf0f4; padding:12px 0; }
+    .child { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:8px; }
     .muted { color:#667085; }
     .status { min-height:24px; font-weight:700; }
     .error { color:#b42318; }
@@ -28,7 +29,7 @@
   <p class="warning">DEMO DATA — 不要輸入真實學生、家庭或零用金資料。</p>
 
   <section class="panel">
-    <p>模擬登入身份（只用於 BDD-002 驗收）</p>
+    <p>模擬登入身份（Parent rename 驗收；不是正式 Authentication）</p>
     <div class="row">
       <button id="parent-a" class="active" onclick="switchParent('parent-a')">家長 A</button>
       <button id="parent-b" onclick="switchParent('parent-b')">家長 B</button>
@@ -102,16 +103,47 @@ function renderBootstrap(result) {
     const block = document.createElement('div');
     block.className = 'family';
 
+    const heading = document.createElement('div');
+    heading.className = 'row';
+
     const title = document.createElement('strong');
     title.textContent = family.displayName;
-    block.appendChild(title);
+    heading.appendChild(title);
 
-    const list = document.createElement('div');
-    list.className = 'muted';
-    list.textContent = family.students.length
-      ? '孩子：' + family.students.map(function(student) { return student.displayName; }).join('、')
-      : '尚未新增孩子';
-    block.appendChild(list);
+    const renameFamilyButton = document.createElement('button');
+    renameFamilyButton.type = 'button';
+    renameFamilyButton.textContent = '修改家庭名稱';
+    renameFamilyButton.onclick = function() {
+      renameFamily(family.familyId, family.displayName);
+    };
+    heading.appendChild(renameFamilyButton);
+    block.appendChild(heading);
+
+    if (!family.students.length) {
+      const empty = document.createElement('div');
+      empty.className = 'muted';
+      empty.textContent = '尚未新增孩子';
+      block.appendChild(empty);
+    } else {
+      family.students.forEach(function(student) {
+        const child = document.createElement('div');
+        child.className = 'child';
+
+        const name = document.createElement('span');
+        name.textContent = student.displayName;
+        child.appendChild(name);
+
+        const renameStudentButton = document.createElement('button');
+        renameStudentButton.type = 'button';
+        renameStudentButton.textContent = '修改名稱';
+        renameStudentButton.onclick = function() {
+          renameStudent(student.studentId, student.displayName);
+        };
+        child.appendChild(renameStudentButton);
+
+        block.appendChild(child);
+      });
+    }
 
     const form = document.createElement('form');
     form.style.marginTop = '10px';
@@ -144,7 +176,7 @@ function createFamily(event) {
     .withSuccessHandler(function(result) {
       if (!result.ok) return showError(result.error);
       input.value = '';
-      setStatus('家庭已永久儲存。重新整理後仍會存在。', false);
+      setStatus('家庭已永久儲存。', false);
       loadFamilies();
     })
     .withFailureHandler(function() {
@@ -168,12 +200,46 @@ function addStudent(familyId, displayName) {
     .apiAddStudent(currentParent, familyId, displayName);
 }
 
+function renameFamily(familyId, currentName) {
+  const nextName = window.prompt('修改家庭名稱', currentName);
+  if (nextName === null) return;
+
+  setStatus('儲存中…', false);
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.ok) return showError(result.error);
+      setStatus('家庭名稱已更新。', false);
+      loadFamilies();
+    })
+    .withFailureHandler(function() {
+      setStatus('修改家庭名稱失敗。', true);
+    })
+    .apiRenameFamily(currentParent, familyId, nextName);
+}
+
+function renameStudent(studentId, currentName) {
+  const nextName = window.prompt('修改名稱', currentName);
+  if (nextName === null) return;
+
+  setStatus('儲存中…', false);
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.ok) return showError(result.error);
+      setStatus('孩子名稱已更新。', false);
+      loadFamilies();
+    })
+    .withFailureHandler(function() {
+      setStatus('修改孩子名稱失敗。', true);
+    })
+    .apiRenameStudent(currentParent, studentId, nextName);
+}
+
 function showError(error) {
   const code = error && error.code ? error.code : 'PERSISTENCE_FAILED';
   const messages = {
     EMPTY_FAMILY_NAME: '請輸入家庭名稱。',
     EMPTY_CHILD_NAME: '請輸入孩子名稱。',
-    RESOURCE_NOT_AVAILABLE: '你沒有權限存取這個家庭。',
+    RESOURCE_NOT_AVAILABLE: '你沒有權限存取這筆資料。',
     PERSISTENCE_BUSY: '目前多人同時操作，請再試一次。',
     SCHEMA_MISMATCH: '資料庫版本不相容。',
     PERSISTENCE_FAILED: '永久儲存失敗，請再試一次。'

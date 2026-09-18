@@ -1,9 +1,10 @@
 const QEK_SPREADSHEET_ID = '16GjrllU2rRgUBXH7evGQCFqOTHQbhtJRFX6CjkvKBA8';
-const QEK_SCHEMA_VERSION = 1;
+const QEK_SCHEMA_VERSION = 2;
 const QEK_SHEETS = {
   families: 'families',
   students: 'students',
   meta: 'schema_meta',
+  audit: 'audit_log',
 };
 
 function doGet() {
@@ -40,6 +41,9 @@ function apiCreateFamily(parentId, displayName) {
       createdAt: now,
       updatedAt: now,
       status: 'active',
+      deletedAt: '',
+      deletedByActorId: '',
+      deletedByRole: '',
     };
 
     withScriptLock_(function() {
@@ -50,6 +54,9 @@ function apiCreateFamily(parentId, displayName) {
         family.createdAt,
         family.updatedAt,
         family.status,
+        family.deletedAt,
+        family.deletedByActorId,
+        family.deletedByRole,
       ]);
     });
 
@@ -76,6 +83,9 @@ function apiAddStudent(parentId, familyId, displayName) {
       createdAt: now,
       updatedAt: now,
       status: 'active',
+      deletedAt: '',
+      deletedByActorId: '',
+      deletedByRole: '',
     };
 
     withScriptLock_(function() {
@@ -86,6 +96,9 @@ function apiAddStudent(parentId, familyId, displayName) {
         student.createdAt,
         student.updatedAt,
         student.status,
+        student.deletedAt,
+        student.deletedByActorId,
+        student.deletedByRole,
       ]);
     });
 
@@ -108,6 +121,174 @@ function apiReadFamily(parentId, familyId) {
   });
 }
 
+function apiRenameFamily(parentId, familyId, displayName) {
+  return apiResult_(function() {
+    const principal = demoPrincipal_(parentId);
+    ensureSchema_();
+    const name = cleanName_(displayName, 'EMPTY_FAMILY_NAME');
+
+    return withScriptLock_(function() {
+      const row = findFamilyRow_(familyId);
+      if (!row || row.owner_parent_id !== principal.parentId || row.status !== 'active') {
+        throw qekError_('RESOURCE_NOT_AVAILABLE');
+      }
+
+      const now = new Date().toISOString();
+      const before = String(row.display_name);
+      row.display_name = name;
+      row.updated_at = now;
+      writeObjectRow_(QEK_SHEETS.families, row);
+      appendAudit_({
+        actorId: principal.actorId,
+        actorRole: principal.role,
+        action: 'RENAME_FAMILY',
+        targetType: 'FAMILY',
+        targetId: familyId,
+        familyId: familyId,
+        beforeValue: before,
+        afterValue: name,
+        occurredAt: now,
+      });
+      SpreadsheetApp.flush();
+      return { family: familyFromRow_(row) };
+    });
+  });
+}
+
+function apiRenameStudent(parentId, studentId, displayName) {
+  return apiResult_(function() {
+    const principal = demoPrincipal_(parentId);
+    ensureSchema_();
+    const name = cleanName_(displayName, 'EMPTY_CHILD_NAME');
+
+    return withScriptLock_(function() {
+      const student = findStudentRow_(studentId);
+      if (!student || student.status !== 'active') {
+        throw qekError_('RESOURCE_NOT_AVAILABLE');
+      }
+
+      const family = findFamilyRow_(student.family_id);
+      if (!family || family.status !== 'active' || family.owner_parent_id !== principal.parentId) {
+        throw qekError_('RESOURCE_NOT_AVAILABLE');
+      }
+
+      const now = new Date().toISOString();
+      const before = String(student.display_name);
+      student.display_name = name;
+      student.updated_at = now;
+      writeObjectRow_(QEK_SHEETS.students, student);
+      appendAudit_({
+        actorId: principal.actorId,
+        actorRole: principal.role,
+        action: 'RENAME_STUDENT',
+        targetType: 'STUDENT',
+        targetId: studentId,
+        familyId: String(student.family_id),
+        beforeValue: before,
+        afterValue: name,
+        occurredAt: now,
+      });
+      SpreadsheetApp.flush();
+      return { student: studentFromRow_(student) };
+    });
+  });
+}
+
+// Private server-only helpers for future authenticated administrator flows.
+// The trailing underscore prevents these functions from being called via google.script.run.
+function adminDeleteStudent_(trustedPrincipal, studentId, confirmed) {
+  ensureAdmin_(trustedPrincipal);
+  if (confirmed !== true) throw qekError_('DELETE_CONFIRMATION_REQUIRED');
+  ensureSchema_();
+
+  return withScriptLock_(function() {
+    const student = findStudentRow_(studentId);
+    if (!student || student.status !== 'active') {
+      throw qekError_('RESOURCE_NOT_AVAILABLE');
+    }
+    const now = new Date().toISOString();
+    student.status = 'deleted';
+    student.deleted_at = now;
+    student.deleted_by_actor_id = trustedPrincipal.actorId;
+    student.deleted_by_role = 'ADMIN';
+    student.updated_at = now;
+    writeObjectRow_(QEK_SHEETS.students, student);
+    appendAudit_({
+      actorId: trustedPrincipal.actorId,
+      actorRole: 'ADMIN',
+      action: 'DELETE_STUDENT',
+      targetType: 'STUDENT',
+      targetId: studentId,
+      familyId: String(student.family_id),
+      beforeValue: String(student.display_name),
+      afterValue: 'deleted',
+      occurredAt: now,
+    });
+    SpreadsheetApp.flush();
+    return { student: studentFromRow_(student) };
+  });
+}
+
+function adminDeleteFamily_(trustedPrincipal, familyId, confirmed) {
+  ensureAdmin_(trustedPrincipal);
+  if (confirmed !== true) throw qekError_('DELETE_CONFIRMATION_REQUIRED');
+  ensureSchema_();
+
+  return withScriptLock_(function() {
+    const family = findFamilyRow_(familyId);
+    if (!family || family.status !== 'active') {
+      throw qekError_('RESOURCE_NOT_AVAILABLE');
+    }
+
+    const now = new Date().toISOString();
+    const children = readObjects_(QEK_SHEETS.students).filter(function(row) {
+      return row.family_id === familyId && row.status === 'active';
+    });
+
+    family.status = 'deleted';
+    family.deleted_at = now;
+    family.deleted_by_actor_id = trustedPrincipal.actorId;
+    family.deleted_by_role = 'ADMIN';
+    family.updated_at = now;
+    writeObjectRow_(QEK_SHEETS.families, family);
+
+    children.forEach(function(student) {
+      student.status = 'deleted';
+      student.deleted_at = now;
+      student.deleted_by_actor_id = trustedPrincipal.actorId;
+      student.deleted_by_role = 'ADMIN';
+      student.updated_at = now;
+      writeObjectRow_(QEK_SHEETS.students, student);
+      appendAudit_({
+        actorId: trustedPrincipal.actorId,
+        actorRole: 'ADMIN',
+        action: 'DELETE_STUDENT',
+        targetType: 'STUDENT',
+        targetId: String(student.student_id),
+        familyId: familyId,
+        beforeValue: String(student.display_name),
+        afterValue: 'deleted',
+        occurredAt: now,
+      });
+    });
+
+    appendAudit_({
+      actorId: trustedPrincipal.actorId,
+      actorRole: 'ADMIN',
+      action: 'DELETE_FAMILY',
+      targetType: 'FAMILY',
+      targetId: familyId,
+      familyId: familyId,
+      beforeValue: String(family.display_name),
+      afterValue: 'deleted',
+      occurredAt: now,
+    });
+
+    SpreadsheetApp.flush();
+    return { family: familyFromRow_(family) };
+  });
+}
+
 function apiResult_(work) {
   try {
     return { ok: true, data: work() };
@@ -126,7 +307,17 @@ function demoPrincipal_(parentId) {
   if (parentId !== 'parent-a' && parentId !== 'parent-b') {
     throw qekError_('RESOURCE_NOT_AVAILABLE');
   }
-  return { parentId: parentId };
+  return {
+    actorId: parentId,
+    role: 'PARENT',
+    parentId: parentId,
+  };
+}
+
+function ensureAdmin_(principal) {
+  if (!principal || principal.role !== 'ADMIN' || !principal.actorId) {
+    throw qekError_('RESOURCE_NOT_AVAILABLE');
+  }
 }
 
 function ensureSchema_() {
@@ -148,10 +339,20 @@ function listFamiliesForParent_(parentId) {
 }
 
 function findFamily_(familyId) {
-  const row = readObjects_(QEK_SHEETS.families).find(function(item) {
-    return item.family_id === familyId;
-  });
+  const row = findFamilyRow_(familyId);
   return row ? familyFromRow_(row) : null;
+}
+
+function findFamilyRow_(familyId) {
+  return readObjects_(QEK_SHEETS.families).find(function(item) {
+    return item.family_id === familyId;
+  }) || null;
+}
+
+function findStudentRow_(studentId) {
+  return readObjects_(QEK_SHEETS.students).find(function(item) {
+    return item.student_id === studentId;
+  }) || null;
 }
 
 function listStudentsForFamily_(familyId) {
@@ -189,20 +390,43 @@ function readObjects_(sheetName) {
   if (values.length <= 1) return [];
 
   const headers = values[0].map(String);
-  return values.slice(1).filter(function(row) {
-    return row.some(function(cell) { return cell !== ''; });
-  }).map(function(row) {
-    const result = {};
-    headers.forEach(function(header, index) {
-      result[header] = row[index];
+  return values.slice(1).map(function(row, index) {
+    const result = { _rowNumber: index + 2 };
+    headers.forEach(function(header, columnIndex) {
+      result[header] = row[columnIndex];
     });
     return result;
+  }).filter(function(row) {
+    return headers.some(function(header) { return row[header] !== ''; });
   });
+}
+
+function writeObjectRow_(sheetName, row) {
+  const target = sheet_(sheetName);
+  const headers = target.getRange(1, 1, 1, target.getLastColumn()).getValues()[0].map(String);
+  const values = headers.map(function(header) {
+    return row[header] == null ? '' : row[header];
+  });
+  target.getRange(row._rowNumber, 1, 1, headers.length).setValues([values]);
+}
+
+function appendAudit_(event) {
+  appendRow_(QEK_SHEETS.audit, [
+    'audit_' + Utilities.getUuid(),
+    event.occurredAt,
+    event.actorId,
+    event.actorRole,
+    event.action,
+    event.targetType,
+    event.targetId,
+    event.familyId,
+    event.beforeValue,
+    event.afterValue,
+  ]);
 }
 
 function appendRow_(sheetName, values) {
   sheet_(sheetName).appendRow(values);
-  SpreadsheetApp.flush();
 }
 
 function withScriptLock_(work) {
@@ -218,9 +442,9 @@ function withScriptLock_(work) {
 }
 
 function sheet_(name) {
-  const sheet = SpreadsheetApp.openById(QEK_SPREADSHEET_ID).getSheetByName(name);
-  if (!sheet) throw qekError_('SCHEMA_MISMATCH');
-  return sheet;
+  const target = SpreadsheetApp.openById(QEK_SPREADSHEET_ID).getSheetByName(name);
+  if (!target) throw qekError_('SCHEMA_MISMATCH');
+  return target;
 }
 
 function cleanName_(value, code) {
