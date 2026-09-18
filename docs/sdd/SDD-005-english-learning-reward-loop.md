@@ -396,7 +396,7 @@ BDD-005 只負責「賺」。
 
 BDD-005 階段還沒有 payout，所以：
 
-```text
+~~~text
 saving_pool
 = learning_events 裡所有 reward_amount 的總和
 ~~~
