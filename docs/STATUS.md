@@ -73,7 +73,7 @@ SDD-005 已確認，現在正式進入 TDD-005 Red。
 | **BDD-002 — 家庭與孩子資料持久化** | `DONE` | Google Sheet / Apps Script durable persistence |
 | **BDD-003 — 名稱維護與管理員資料管理** | `DONE` | Parent rename, admin management domain, schema v2, audit log, soft delete safety boundary |
 
-Current automated regression: **99 / 99 PASS**. TDD-005 code is Green; Apps Script deployment and UI/Sheet acceptance remain pending.
+Current automated regression: **106 / 106 PASS**. TDD-005 code is Green; Apps Script deployment and UI/Sheet acceptance remain pending.
 
 ---
 
