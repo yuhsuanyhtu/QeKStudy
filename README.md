@@ -1,1 +1,228 @@
 # QeKStudy
+
+> 中文 / English
+
+QeKStudy 是一個從實際家庭與班級學習需求出發的跨科學習系統。  
+它目前正在以 **Agile + BDD + SDD + TDD + Regression** 的方式，一次一個 Story 開發。
+
+QeKStudy is a multi-subject learning system built from real family and classroom learning needs.  
+Development follows **Agile + BDD + SDD + TDD + Regression**, one story at a time.
+
+---
+
+## 目前目標 / Current Goal
+
+QeKStudy 的方向不是單純「多做題」，而是讓學生：
+
+- 願意開始與持續練習
+- 逐步增加題量與挑戰
+- 答錯時知道應該回哪裡複習
+- 隨年級累積並整合以前學過的知識
+- 未來逐步加入會考型與跨單元題目
+- 讓家庭可以自行設定與管理零用金獎勵
+- 支援不同家庭、不同學生與不同科目
+
+QeKStudy is intended to help students:
+
+- start and continue practicing,
+- increase practice volume and challenge gradually,
+- know where to review after mistakes,
+- retain and integrate previously learned knowledge,
+- progressively practice exam-style and cross-unit questions,
+- connect effort with family-controlled allowance rewards,
+- and support multiple families, students, and subjects.
+
+更多背景請看：  
+See product background:
+
+`GptThinking/PRODUCT_ORIGIN.md`
+
+---
+
+## 開發方式 / Development Workflow
+
+每個 Story 固定走：
+
+```text
+BDD
+↓
+SDD
+↓
+TDD (Red)
+↓
+Implementation
+↓
+TDD (Green)
+↓
+Minimal UI
+↓
+Story Tests
+↓
+Regression
+↓
+UI + BDD Acceptance
+↓
+Done
+```
+
+**沒有可操作 UI，就不算 Done。**
+
+**A story is not Done without an operable UI.**
+
+完整流程：  
+Full workflow:
+
+`docs/process/AGILE_WORKFLOW.md`
+
+---
+
+## 目前進度 / Current Status
+
+### BDD-001 — 家庭可見性與孩子綁定
+### Family Visibility & Child Binding
+
+狀態：**Done**
+
+Status: **Done**
+
+已完成：
+
+- 建立家庭
+- 建立者具有家庭管理權
+- 家長只能看到自己的家庭
+- 家長只能在自己的家庭新增孩子
+- 跨家庭讀取與修改會被拒絕
+- 最小可操作 UI
+- Regression：16/16 通過
+
+Completed:
+
+- family creation,
+- managing-parent ownership,
+- family-scoped visibility,
+- child creation within owned family,
+- cross-family access prevention,
+- minimal operable UI,
+- regression: 16/16 passing.
+
+規格與驗收：
+
+- `docs/bdd/BDD-001-family-child-binding.feature`
+- `docs/sdd/SDD-001-family-child-binding.md`
+- `docs/tdd/TDD-001-family-child-binding.md`
+- `docs/acceptance/Acceptance-001-family-child-binding.md`
+
+### BDD-002 — 家庭與孩子資料持久化
+### Persistent Family & Child Data
+
+狀態：**BDD / SDD 已確認，下一步 TDD**
+
+Status: **BDD / SDD approved, TDD next**
+
+目前設計：
+
+- Google Sheet 作為 durable storage
+- Google Apps Script 作為 server-side persistence layer
+- 跨 reload / browser restart / device 仍可取得資料
+- 持久化後仍維持家庭隔離
+- 儲存失敗不得假裝成功
+- 正式 Authentication 完成前只使用 Demo data
+
+Current design:
+
+- Google Sheets as durable storage,
+- Google Apps Script as server-side persistence,
+- data survives reload/browser/device changes,
+- family isolation remains enforced,
+- persistence failures must be explicit,
+- demo data only until production authentication exists.
+
+規格：
+
+- `docs/bdd/BDD-002-persistent-family-data.feature`
+- `docs/sdd/SDD-002-persistent-family-data.md`
+
+---
+
+## Demo / 驗收畫面
+
+目前 BDD-001 的 GitHub Pages Demo：
+
+https://yuhsuanyhtu.github.io/QeKStudy/
+
+The current GitHub Pages demo is for BDD-001 acceptance.
+
+目前畫面中的「家長 A / 家長 B」是 **開發驗收用模擬身份**，不是正式登入。
+
+The “Parent A / Parent B” switch is a **development acceptance simulation**, not production authentication.
+
+> ⚠️ 在正式 Authentication Story 完成前，不要輸入真實學生、家庭或零用金資料。  
+> ⚠️ Do not enter real student, family, or allowance data until production authentication is implemented.
+
+---
+
+## 本機執行 / Run Locally
+
+目前前端是純 HTML / CSS / JavaScript。
+
+The current frontend uses plain HTML / CSS / JavaScript.
+
+可使用任何簡單 HTTP server，例如：
+
+```bash
+python3 -m http.server 8000
+```
+
+然後開：
+
+`http://localhost:8000/`
+
+測試：
+
+```bash
+npm test
+```
+
+目前 Node.js requirement：
+
+`Node.js >= 20`
+
+---
+
+## Repository Structure / 專案結構
+
+```text
+QeKStudy/
+├─ index.html
+├─ app.js
+├─ style.css
+├─ src/
+│  └─ family-domain.js
+├─ test/
+│  ├─ family-domain.test.js
+│  └─ ui-contract.test.js
+├─ docs/
+│  ├─ bdd/
+│  ├─ sdd/
+│  ├─ tdd/
+│  ├─ acceptance/
+│  └─ process/
+└─ GptThinking/
+   ├─ PRODUCT_ORIGIN.md
+   └─ session-2026-09-18.md
+```
+
+---
+
+## 原則 / Principles
+
+- 一次只做一個 Story。  
+  One story at a time.
+- 需求可以改，但修改原因與歷史要保留。  
+  Requirements may change, but history and rationale remain traceable.
+- 每個 Story 都做完整 Regression。  
+  Every story runs the full regression suite.
+- 真實使用行為、學生回饋、家長觀察與老師經驗優先於預設想像。  
+  Real usage, student feedback, parent observation, and teacher experience drive requirements.
+- 家庭是私人資料與零用金的主要邊界。  
+  Family is the primary boundary for private data and allowance control.
