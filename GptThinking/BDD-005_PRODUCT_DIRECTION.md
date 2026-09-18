@@ -509,3 +509,20 @@ The first version should remain small and manually curated. The exact round comp
 
 另外，重新 review BDD-004 時發現舊版只有 PARENT / ADMIN，已不足以支援真實學生學習紀錄，所以新 BDD-004 Draft 增加 STUDENT 身分與學生資料隔離。
 
+
+
+## 17. Authentication 再次延後 / Authentication Deferred Again
+
+2026-09-18 晚間再次確認：
+
+- 團隊知道目前沒有正式 Authentication 的安全限制。
+- 資料庫先用 family_id / student_id 把資料分割乾淨。
+- BDD-005 先限定單一家庭 / 單一學生受控使用。
+- 學習與獎勵仍正式寫入 Google Sheet。
+- Apps Script server 以受控設定綁定固定 student_id，browser 不選 student_id。
+- 未來 Authentication 完成後，只替換「登入身份 → student_id」這一層，不重做 learning_events。
+- 若第二個真實家庭開始使用、其他學生/家長直接使用、開放外部自行加入、公開家長提領或 Admin 破壞性 UI，就重新撿回 BDD-004。
+
+這個決策是刻意的產品取捨：
+
+> 先驗證學習價值，但不把目前公開 Demo 誤稱為安全多人系統。
