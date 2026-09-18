@@ -15,6 +15,10 @@ const code = await readFile(
   new URL('../apps-script/Code.gs', import.meta.url),
   'utf8',
 );
+const rewardConfig = await readFile(
+  new URL('../apps-script/EnglishRewardConfig.gs', import.meta.url),
+  'utf8',
+);
 
 test('TDD-005-CONTENT-01 English learning content lives in repo JSON', () => {
   assert.ok(catalog.catalogVersion);
@@ -64,4 +68,11 @@ test('TDD-005-CONTENT-06 active quiz filters inactive revisions but server looku
   assert.match(logic, /function\s+findEnglishQuestionRevision_/);
   assert.match(logic, /question\.questionId\s*===\s*questionId/);
   assert.match(logic, /Number\(question\.revision\)\s*===\s*Number\(revision\)/);
+});
+
+
+test('TDD-005-CONTENT-07 unapproved allowance amounts are not enabled in deployed config', () => {
+  assert.match(rewardConfig, /configured:\s*false/);
+  assert.match(rewardConfig, /dailyCap:\s*null/);
+  assert.match(rewardConfig, /flashcardLessonCompletion:\s*null/);
 });
