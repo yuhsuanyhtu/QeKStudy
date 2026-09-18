@@ -1,9 +1,22 @@
 # SDD-005 — 英文最小學習與獎勵閉環
 # English Minimum Learning & Reward Loop
 
-狀態 Status: **DRAFT — 等待確認 / Awaiting review**  
+狀態 Status: **暫停修訂 — 等 BDD-004 重新確認 / Paused pending BDD-004 review**  
 對應需求 Requirement: **BDD-005 APPROVED**  
 日期 Date: **2026-09-18**
+
+> **需求變更通知 / Requirement change**
+>
+> 2026-09-18 已確認兩個重要修改：
+>
+> 1. BDD-005 的學習紀錄與獎勵紀錄要寫入 **Google Sheet**，不能只存在瀏覽器。
+> 2. 獎勵要形成真正的家庭零用金流程：**學習產生待領零用金 → 被授權家長確認發放 → 系統留下已發放紀錄**。
+>
+> 因此本文件中「只存 localStorage」「不改 Google Sheet」「只算 points、不做發放」等設計已失效。
+> 這些修改正好觸發 BDD-004 的 pickup condition，所以在 BDD-004 重新確認前，不應進入 TDD-005。
+>
+> 第一個一般測驗仍維持 **中翻英**。
+
 
 ---
 
