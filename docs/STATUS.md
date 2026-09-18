@@ -35,17 +35,16 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 目前唯一 ACTIVE Story：
 
-**BDD-004 — 使用者登入、學生身分與角色辨識 / Authentication, Learner Identity & Role Recognition**
+**BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop**
 
-BDD-005 新增了一個正式資料需求：
+目前決策：
 
-- 學習與獎勵紀錄要寫入 Google Sheet，學習產生的獎勵累積進 saving pool。
-
-這已觸發原本 BDD-004 的 pickup trigger，因此 BDD-004 重新進入 review。
-
-真正的零用金發放是另一個家長頁流程，不屬於 BDD-005。
-
-BDD-004 已重新確認。下一步依 Agile 流程進入 SDD-004；BDD-005 仍暫停，等 BDD-004 完成必要設計後再回來 review。
+- BDD-004 已重新 review 過，但完整 Authentication 仍刻意延後。
+- BDD-005 先以**單一家庭 / 單一學生 / 受控使用**繼續。
+- 學習與獎勵紀錄寫入 Google Sheet。
+- 每筆 learning event 都保留 family_id / student_id，資料邊界先設計乾淨。
+- 學習產生的獎勵累積進 saving pool。
+- 真正家長提領 / payout 仍是後續獨立 Story。
 
 ---
 
@@ -53,13 +52,15 @@ BDD-004 已重新確認。下一步依 Agile 流程進入 SDD-004；BDD-005 仍�
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-004 — 使用者登入、學生身分與角色辨識 / Authentication, Learner Identity & Role Recognition** | `ACTIVE · BDD APPROVED` | 重新確認 PARENT / STUDENT / ADMIN 身分與權限，確保真實學習紀錄、獎勵與零用金發放只能由正確的人讀寫。 | `docs/bdd/BDD-004-authentication-role-recognition.feature` |
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `ACTIVE · SDD DRAFT` | 英文閃卡、中翻英、目前/舊知識、合格會考題、錯題複習方向、Google Sheet learning events、saving pool。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
 
 ## Backlog / 待辦 Story
 
 | Story | Status | Why deferred / 為什麼現在不做 | Pickup Trigger / 何時撿回 | Existing spec |
 |---|---|---|---|---|
-| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `DEFERRED` | 需求已改為要保存真實學習/獎勵到 Google Sheet，並把學習獎勵累積進 saving pool；在身份與權限未重新確認前不能安全進 TDD。 | BDD-004 重新確認並完成必要設計後，先重新 review BDD-005，再重寫 SDD-005。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD draft: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
+| **BDD-004 — 使用者登入、學生身分與角色辨識 / Authentication, Learner Identity & Role Recognition** | `DEFERRED · REVIEWED · TRIGGER-BASED` | 身分與安全邊界已 review，但目前先驗證單一家庭/學生的學習價值，不讓完整 Authentication 卡住產品。 | ① 第二個真實家庭開始留下學習/獎勵資料；② 其他學生/家長要直接使用同一系統；③ 外部使用者可自行加入；④ 要公開家長提領或 Admin 破壞性操作；⑤ 要把「不能冒用別人」升級成正式安全保證。 | `docs/bdd/BDD-004-authentication-role-recognition.feature` |
+
+---
 
 ## Done / 已完成
 
