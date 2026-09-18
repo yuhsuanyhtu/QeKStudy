@@ -2,7 +2,7 @@
 # QeKStudy BDD-005
 # 中文：英文最小學習與獎勵閉環
 # English: English Minimum Learning & Reward Loop
-# Status: ACTIVE / DRAFT
+# Status: ACTIVE / BDD APPROVED
 #
 # 這一版把原本過度技術化的文字改成學生實際看得到、做得到的行為。
 # 舊版本保留在 Git history。
