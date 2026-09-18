@@ -1,13 +1,13 @@
+// BDD-005 reward policy has not been numerically approved yet.
+// Keep learning/event persistence usable, but do not invent real allowance amounts.
+// Once the family approves actual values, change configured to true and fill every value.
 function getEnglishRewardConfig_() {
   return {
-    dailyCap: 100,
-    flashcardLessonCompletion: 5,
-    difficultyBase: {
-      1: 2,
-      2: 4,
-      3: 6,
-    },
-    retryFactor: 0.5,
-    repeatFactors: [1, 0.5, 0.25],
+    configured: false,
+    dailyCap: null,
+    flashcardLessonCompletion: null,
+    difficultyBase: {},
+    retryFactor: null,
+    repeatFactors: [],
   };
 }
