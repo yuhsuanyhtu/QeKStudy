@@ -1,6 +1,6 @@
 # Acceptance-002 — 家庭與孩子資料持久化 / Persistent Family & Child Data
 
-狀態 Status: Manual UI acceptance pending  
+狀態 Status: PASSED / DONE  
 日期 Date: 2026-09-18  
 BDD: BDD-002  
 SDD: SDD-002
@@ -56,8 +56,27 @@ Expected:
 - family_id / student_id 應為 server-generated IDs。
 - owner_parent_id 必須正確對應 parent-a / parent-b。
 
-## Done Gate
+## Acceptance Result / 驗收結果
 
-BDD-002 只有在以上 UI acceptance 通過後才能標記 Done。
+2026-09-18 使用者完成 deployed UI 驗收並回報「正常」。
 
-BDD-002 is Done only after the manual UI acceptance passes.
+User completed the deployed UI acceptance and reported that the behavior was normal.
+
+Google Sheet durable data verification after acceptance:
+
+- `families`: 3 persisted family rows
+- `students`: 5 persisted student rows
+- both `parent-a` and `parent-b` ownership rows are present
+- family IDs use server-generated `fam_<uuid>` format
+- student IDs use server-generated `stu_<uuid>` format
+- `schema_version = 1`
+
+最後 GitHub Actions regression：
+
+- Total: 28
+- Passed: 28
+- Failed: 0
+
+BDD-002 acceptance passed and the story is **Done**.
+
+BDD-002 驗收完成，Story 正式 **Done**。
