@@ -221,20 +221,24 @@ Allowance is part of the real engagement loop. A minimal learning demo that omit
 
 Student controls learning choices. The family controls allowance rules, approval, corrections, and actual payout.
 
-### 尚未決定 / Not Yet Decided
+### 已確認的獎勵原則 / Confirmed Reward Principles
 
-BDD-005 尚未決定：
+目前已確認：
 
-- 完成一輪是否有固定獎勵；
-- 第一次答對是否按題計酬；
-- retry 後答對如何計算；
-- 會考題是否有不同獎勵；
-- 每日上限；
-- 是否沿用 TeenageStudyTool 現有公式。
+- 不同困難程度可以有不同基礎點數；
+- 已經答對、掌握過的內容再次重複複習時，獎勵應依規則遞減；
+- 每一科每天各自有獎勵頂標；
+- 達到每日頂標後仍可繼續學習，只是不再增加該科當日獎勵；
+- 單字閃卡屬於 exposure reward：一課所有單字都必須各自實際顯示至少 1 秒，全部完成才取得基本分；
+- 閃卡完成只代表「今天完整看過」，不代表已掌握；
+- first-try correct 與 retry 後才答對必須保留不同的學習事實，獎勵規則可以不同；
+- 家庭控制規則、核准、調整與實際發放。
 
-**不要在 SDD 或 coding 階段自行發明金額規則。**
+仍未決定的是**具體點數與金額公式**，例如各題型實際多少點、retry 的比例、不同困難度的實際倍率。
 
-Do not invent allowance formulas during SDD or implementation. The behavioral rule must be discussed and confirmed first.
+**不要在 SDD 或 coding 階段自行發明具體金額規則。**
+
+Do not invent exact point or monetary values during SDD or implementation.
 
 ---
 
@@ -335,8 +339,8 @@ First prove the student-facing learning loop with a small manually curated Engli
 3. **學生答錯後 UI 要提供哪些選項？**
 4. **「去哪裡複習」要細到什麼程度才真的有用？**
 5. **本輪結果頁要呈現哪些事實，不要變成評判學生的成績單？**
-6. **BDD-005 的最小零用金規則是什麼？**
-7. **retry 後答對如何影響學習結果與零用金？**
+6. **各題型與困難程度的實際點數要設定多少？**
+7. **retry 後答對的實際獎勵比例要設定多少？**
 8. **第一批 Demo 英文題目要對應謙恩目前哪個課堂進度？**
 9. **第一批符合目前已學內容的會考考古題怎麼挑？**
 
