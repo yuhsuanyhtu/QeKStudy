@@ -1,7 +1,7 @@
 # SDD-005 — 英文最小學習與獎勵閉環
 # English Minimum Learning & Reward Loop
 
-狀態 Status: **DRAFT — 等待確認 / Awaiting review**  
+狀態 Status: **APPROVED — TDD-005 Red 已開始 / TDD-005 Red started**  
 對應需求 Requirement: **BDD-005 APPROVED**  
 日期 Date: **2026-09-18**
 
