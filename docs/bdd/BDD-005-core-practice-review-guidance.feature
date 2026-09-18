@@ -2,7 +2,7 @@
 # QeKStudy BDD-005
 # 中文：英文最小學習與獎勵閉環
 # English: English Minimum Learning & Reward Loop
-# Status: DEFERRED / RE-REVIEW AFTER BDD-004
+# Status: ACTIVE / SDD DRAFT
 #
 # 這一版把原本過度技術化的文字改成學生實際看得到、做得到的行為。
 # 舊版本保留在 Git history。
@@ -14,7 +14,9 @@
 # - learning and reward records must be persisted to Google Sheets;
 # - learning rewards accumulate into a saving pool;
 # - actual payout is a separate parent-page flow and is not part of BDD-005.
-# Persisting real learning/reward records triggers BDD-004 re-review before BDD-005 can continue to TDD.
+# BDD-004 已重新 review；產品決定完整 Authentication 仍延後。
+# BDD-005 以單一家庭 / 單一學生受控模式繼續，
+# Google Sheet 仍以 family_id / student_id 分割資料，方便未來 Authentication 接上。
 
 功能: 英文最小學習與獎勵閉環
   為了讓學生願意每天練英文，並且記得現在和以前學過的內容
