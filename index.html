@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QeKStudy · Iteration 001</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">QeKStudy · Iteration 001</p>
+      <h1>家庭群組</h1>
+      <p>這個簡易 UI 用來驗收 BDD-001：家長只看得到自己的家庭，並只能在自己的家庭新增孩子。</p>
+    </header>
+
+    <section class="panel" aria-labelledby="demo-title">
+      <div>
+        <p class="label">開發驗收 Demo</p>
+        <h2 id="demo-title">模擬目前已登入的家長</h2>
+      </div>
+      <div class="identity-switch" role="group" aria-label="模擬家長身分">
+        <button type="button" data-parent="parent-a" class="identity active">家長 A</button>
+        <button type="button" data-parent="parent-b" class="identity">家長 B</button>
+      </div>
+      <p class="hint">這不是正式登入功能，只是讓你驗收兩個家庭彼此看不到。</p>
+    </section>
+
+    <section class="grid">
+      <section class="panel">
+        <h2>建立家庭</h2>
+        <form id="family-form">
+          <label for="family-name">家庭名稱</label>
+          <input id="family-name" name="familyName" placeholder="例如：QeK 的家庭" autocomplete="off" />
+          <button type="submit">建立家庭</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="label">目前家長</p>
+            <h2 id="current-parent">家長 A</h2>
+          </div>
+          <span id="family-count" class="count">0 個家庭</span>
+        </div>
+        <div id="family-list" class="family-list" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section id="family-detail" class="panel hidden">
+      <div class="section-heading">
+        <div>
+          <p class="label">選取家庭</p>
+          <h2 id="selected-family-name"></h2>
+        </div>
+      </div>
+      <form id="child-form">
+        <label for="child-name">新增孩子</label>
+        <div class="inline-form">
+          <input id="child-name" name="childName" placeholder="例如：QeK" autocomplete="off" />
+          <button type="submit">新增孩子</button>
+        </div>
+      </form>
+      <div id="student-list" class="student-list"></div>
+    </section>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -12,6 +12,14 @@ QeKStudy follows an Agile process where only one requirement/story is actively d
 
 Do not develop multiple stories in parallel. The next story does not begin until the current story is complete, accepted, and regression tests pass.
 
+**每一個 iteration 的 Done 必須有可操作 UI。**
+
+**Every completed iteration must include an operable UI.**
+
+UI 可以先很簡易；如果該 Story 主要是底層能力，允許使用 developer/demo UI 將該能力呈現出來，但 UI 必須實際連到同一份 domain/application logic，不可只是與功能無關的靜態 mock。
+
+The UI may be minimal. For backend/domain-oriented stories, a developer/demo UI is acceptable, but it must exercise the same domain/application logic rather than being an unrelated static mock.
+
 ---
 
 ## 每個 Story 的固定流程 / Standard Story Flow
@@ -33,20 +41,26 @@ Do not develop multiple stories in parallel. The next story does not begin until
    - 只寫足以讓本 Story 測試通過的程式。
    - 不順便加入尚未進入 BDD 的功能。
 
-5. **Story Test / 本 Story 測試**
+5. **Minimal UI / 最小可操作 UI**
+   - 每個 Story 都必須提供一個可以操作、可以看見 Story 行為的 UI。
+   - UI 可以簡單，但必須使用本 Story 的真實程式邏輯。
+   - 若正式登入、資料庫等尚未做到，可以清楚標示 Demo/Simulation，不可假裝已完成。
+
+6. **Story Test / 本 Story 測試**
    - 新增測試全部通過。
    - 驗證邊界條件與錯誤情境。
+   - 驗證 UI 與本 Story 的核心介面契約。
 
-6. **Regression / 回歸測試**
+7. **Regression / 回歸測試**
    - 跑所有既有自動化測試。
    - 驗證先前完成的 Story 沒有被破壞。
    - 若 Regression 失敗，本 Story 不得標記完成。
 
-7. **Acceptance / 驗收**
+8. **Acceptance / 驗收**
    - 對照 BDD scenario 驗證使用者行為。
-   - 必要時進行人工 UI/流程驗收。
+   - 必須包含最小 UI 的人工可驗收步驟。
 
-8. **Commit**
+9. **Commit**
    - Regression + Acceptance 通過後 commit。
    - Commit 必須能追溯到 Story / BDD 編號。
 
@@ -60,14 +74,17 @@ Do not develop multiple stories in parallel. The next story does not begin until
 - [ ] SDD 已完成
 - [ ] TDD 測試已建立
 - [ ] 實作完成
+- [ ] **可操作的最小 UI 已完成**
+- [ ] **UI 使用真實 Story 邏輯，不是獨立假畫面**
 - [ ] 新增測試全部通過
 - [ ] 全套 Regression 通過
 - [ ] BDD 驗收情境通過
+- [ ] **UI 驗收步驟可由使用者實際操作**
 - [ ] 文件已同步
 - [ ] Commit 已完成
 - [ ] Session / GptThinking 紀錄已更新（若有重要產品或設計決策）
 
-A story is Done only when BDD, design, tests, implementation, regression, acceptance, documentation, and commit are all complete.
+A story is Done only when BDD, design, tests, implementation, an operable UI, regression, acceptance, documentation, and commit are all complete.
 
 ---
 
@@ -81,6 +98,7 @@ Regression is mandatory for every story, not only for major releases.
 
 - 既有 unit tests
 - 既有 integration tests
+- UI contract / critical UI flow tests
 - 權限與資料隔離測試
 - 金額 / 獎勵計算測試（只要該模組已存在）
 - 重要學生學習流程
@@ -114,27 +132,6 @@ Do not implement unrelated ideas opportunistically. Record them in the backlog a
 
 ---
 
-## 建議 Commit 命名 / Suggested Commit Naming
-
-需求：
-`docs(bdd): add BDD-xxx ...`
-
-設計：
-`docs(sdd): add SDD-xxx ...`
-
-測試：
-`test: add failing tests for BDD-xxx`
-
-實作：
-`feat: implement BDD-xxx ...`
-
-修正：
-`fix: ...`
-
-完整 Story 結束時，commit history 應能清楚追溯需求、設計、測試與實作。
-
----
-
 ## QeKStudy Delivery Loop / QeKStudy 交付循環
 
 ```
@@ -150,14 +147,19 @@ Implementation
    ↓
 TDD (Green)
    ↓
+Minimal UI
+   ↓
+Story Test
+   ↓
 Regression
    ↓
-Acceptance
+UI + BDD Acceptance
    ↓
 Commit
    ↓
 Next Story
 ```
 
-**一次一個，做完再下一個。**
-**One story at a time. Finish it before starting the next.**
+**一次一個，做完再下一個；沒有 UI，不算 Done。**
+
+**One story at a time. Finish it before starting the next; without a UI, it is not Done.**

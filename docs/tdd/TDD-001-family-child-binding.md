@@ -1,6 +1,6 @@
 # TDD-001 — Family Visibility & Child Binding
 
-狀態 Status: GREEN / REGRESSION PASSED  
+狀態 Status: GREEN / UI / REGRESSION PASSED  
 對應 BDD: BDD-001  
 對應 SDD: SDD-001  
 日期 Date: 2026-09-18
@@ -13,13 +13,11 @@ Uses Node.js built-in `node:test` and `node:assert`, with no third-party test de
 
 ## Red → Green
 
-Red 階段先建立 13 個測試，當時 `src/family-domain.js` 尚不存在。
-
-In the Red phase, 13 tests were created before `src/family-domain.js` existed.
+Red 階段先建立 13 個 domain tests，當時 `src/family-domain.js` 尚不存在。
 
 Green 階段新增最小實作 `src/family-domain.js`，只實作 BDD-001 / SDD-001 所要求的家庭邊界行為。
 
-The Green phase adds the minimal `src/family-domain.js` implementation required by BDD-001 / SDD-001.
+之後依新的 Definition of Done 補上最小 UI，並新增 3 個 UI contract tests，確認畫面包含建立家庭 / 新增孩子、可以用兩個模擬家長驗收隔離，而且 UI 直接使用同一份 `family-domain.js`。
 
 ## Test Result / 測試結果
 
@@ -29,16 +27,21 @@ The Green phase adds the minimal `src/family-domain.js` implementation required 
 
 結果：
 
-- Tests: 13
-- Passed: 13
+- Tests: 16
+- Passed: 16
 - Failed: 0
 - Skipped: 0
 
-Regression 再次執行相同完整測試集，結果仍為 13/13 通過。
+其中：
 
-The full regression suite was run again and remained 13/13 passing.
+- Domain tests: 13
+- UI contract tests: 3
 
-## 覆蓋項目 / Covered Behaviors
+Regression 完整測試集：16/16 通過。
+
+The full regression suite passes 16/16 tests.
+
+## Domain 覆蓋項目
 
 1. 建立家庭後，建立者具有管理權。
 2. 新建立家庭出現在建立者的可見家庭清單。
@@ -53,3 +56,9 @@ The full regression suite was run again and remained 13/13 passing.
 11. 被拒絕的跨家庭修改不得留下資料變更。
 12. 空白家庭名稱被拒絕。
 13. 空白孩子名稱被拒絕。
+
+## UI Contract 覆蓋項目
+
+14. UI 有「建立家庭」與「新增孩子」的操作入口。
+15. UI 可用家長 A / 家長 B 模擬已登入身份，直接觀察家庭隔離。
+16. UI import 並使用 `src/family-domain.js`，不是獨立寫死的假資料規則。
