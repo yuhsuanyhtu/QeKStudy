@@ -129,3 +129,24 @@ Type:
 **Use demo data only. Do not enter real student names, family information, or allowance data.**
 
 正式 Authentication 完成後，才會開放真實資料使用。
+
+
+---
+
+## Current Deployment / 目前部署
+
+Web App URL:
+
+https://script.google.com/macros/s/AKfycbwaGdC88YUhlRjYmM1znhMqs4fpEYhnJ2cNkQhEa-EsKccjPzb7PshR2STbqZ6z5IUh2w/exec
+
+Status:
+
+- Deployment URL received
+- Google Sheet schema verified
+- Demo DB currently contains headers only; no family/student rows yet
+- GitHub Actions regression: 28/28 PASS
+- Manual UI acceptance pending
+
+目前 deployment 已建立，但因 ChatGPT 的一般網頁讀取工具無法直接執行 Apps Script HTML Service 的互動式 UI，因此仍需要一次人工 UI 驗收。
+
+The deployment exists, but one manual UI acceptance pass is still required because the standard ChatGPT web fetch cannot execute the interactive Apps Script HTML Service UI.
