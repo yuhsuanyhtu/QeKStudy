@@ -57,3 +57,17 @@ test('TDD-005-UI-07 English inline JavaScript is syntactically valid', async () 
   assert.ok(match);
   assert.doesNotThrow(() => new vm.Script(match[1]));
 });
+
+
+test('TDD-005-UI-08 student actions are blocked while a server request is in flight', async () => {
+  const html = await readEnglishHtml();
+  assert.match(html, /var\s+requestInFlight\s*=\s*true/);
+  assert.match(html, /function\s+setBusy\s*\(/);
+  assert.match(html, /if\s*\(requestInFlight\)\s*return/);
+});
+
+test('TDD-005-UI-09 transport errors are not mislabeled as persistence failures', async () => {
+  const html = await readEnglishHtml();
+  assert.match(html, /SERVER_REQUEST_FAILED/);
+  assert.doesNotMatch(html, /showError\(\{ code: "PERSISTENCE_FAILED" \}\)/);
+});
