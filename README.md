@@ -115,9 +115,9 @@ Completed:
 ### BDD-002 — 家庭與孩子資料持久化
 ### Persistent Family & Child Data
 
-狀態：**Green / Regression 28/28 PASS / UI acceptance pending**
+狀態：**Done — Regression 28/28 PASS**
 
-Status: **Green / Regression 28/28 PASS / UI acceptance pending**
+Status: **Done — Regression 28/28 PASS**
 
 目前設計：
 
@@ -137,10 +137,24 @@ Current design:
 - persistence failures must be explicit,
 - demo data only until production authentication exists.
 
-規格：
+規格與驗收：
 
 - `docs/bdd/BDD-002-persistent-family-data.feature`
 - `docs/sdd/SDD-002-persistent-family-data.md`
+- `docs/tdd/TDD-002-persistent-family-data.md`
+- `docs/acceptance/Acceptance-002-persistent-family-data.md`
+
+### BDD-003 — 名稱維護與管理員資料管理
+### Rename & Admin Data Management
+
+狀態：**BDD Draft — 待確認**
+
+Status: **BDD Draft — pending approval**
+
+- 家長可修改自己家庭與孩子的顯示名稱。
+- 管理員可協助修改任何家庭與孩子的顯示名稱。
+- 只有管理員可執行資料刪除。
+- 一般家長仍不得跨家庭操作。
 
 ---
 
