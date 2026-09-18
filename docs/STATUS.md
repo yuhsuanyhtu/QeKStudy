@@ -45,7 +45,7 @@ BDD-005 新增了一個正式資料需求：
 
 真正的零用金發放是另一個家長頁流程，不屬於 BDD-005。
 
-BDD-005 暫停在 SDD Draft，等 BDD-004 重新確認後再繼續。
+BDD-004 已重新確認。下一步依 Agile 流程進入 SDD-004；BDD-005 仍暫停，等 BDD-004 完成必要設計後再回來 review。
 
 ---
 
@@ -53,7 +53,7 @@ BDD-005 暫停在 SDD Draft，等 BDD-004 重新確認後再繼續。
 
 | Story | Status | Goal / 目標 | Spec |
 |---|---|---|---|
-| **BDD-004 — 使用者登入、學生身分與角色辨識 / Authentication, Learner Identity & Role Recognition** | `ACTIVE · BDD RE-REVIEW DRAFT` | 重新確認 PARENT / STUDENT / ADMIN 身分與權限，確保真實學習紀錄、獎勵與零用金發放只能由正確的人讀寫。 | `docs/bdd/BDD-004-authentication-role-recognition.feature` |
+| **BDD-004 — 使用者登入、學生身分與角色辨識 / Authentication, Learner Identity & Role Recognition** | `ACTIVE · BDD APPROVED` | 重新確認 PARENT / STUDENT / ADMIN 身分與權限，確保真實學習紀錄、獎勵與零用金發放只能由正確的人讀寫。 | `docs/bdd/BDD-004-authentication-role-recognition.feature` |
 
 ## Backlog / 待辦 Story
 
