@@ -2,13 +2,18 @@
 # QeKStudy BDD-005
 # 中文：英文最小學習與獎勵閉環
 # English: English Minimum Learning & Reward Loop
-# Status: ACTIVE / BDD APPROVED
+# Status: DEFERRED / RE-REVIEW AFTER BDD-004
 #
 # 這一版把原本過度技術化的文字改成學生實際看得到、做得到的行為。
 # 舊版本保留在 Git history。
 #
 # This revision rewrites the story in plain user behavior.
 # Previous versions remain in Git history.
+#
+# 2026-09-18 requirement change:
+# - learning and reward records must be persisted to Google Sheets;
+# - allowance must support parent-confirmed payout, not points-only demo behavior.
+# These changes trigger BDD-004 re-review before BDD-005 can continue to TDD.
 
 功能: 英文最小學習與獎勵閉環
   為了讓學生願意每天練英文，並且記得現在和以前學過的內容
