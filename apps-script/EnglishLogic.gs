@@ -1,5 +1,5 @@
 function englishCatalogUrl_() {
-  return 'https://raw.githubusercontent.com/yuhsuanyhtu/QeKStudy/main/data/english/catalog.json';
+  return 'https://yuhsuanyhtu.github.io/QeKStudy/data/english/catalog.json';
 }
 
 function loadEnglishCatalog_() {
@@ -14,7 +14,7 @@ function loadEnglishCatalog_() {
   }
 
   if (response.getResponseCode() !== 200) {
-    throw qekError_('CONTENT_NOT_AVAILABLE');
+    throw qekError_('CONTENT_HTTP_' + response.getResponseCode());
   }
 
   let catalog;
@@ -415,4 +415,25 @@ function apiEnglishCompleteFlashcards(input) {
       ),
     };
   });
+}
+
+
+function apiEnglishContentDiagnostic() {
+  const url = englishCatalogUrl_();
+  const response = UrlFetchApp.fetch(url, {
+    muteHttpExceptions: true,
+    followRedirects: true,
+    headers: { 'Cache-Control': 'no-cache' },
+  });
+
+  const body = response.getContentText();
+  const result = {
+    url: url,
+    responseCode: response.getResponseCode(),
+    contentType: response.getHeaders()['Content-Type'] || '',
+    bodyStart: body.slice(0, 160),
+  };
+
+  console.log(JSON.stringify(result));
+  return result;
 }
