@@ -344,7 +344,110 @@ These questions should be settled in product/BDD discussion before SDD.
 
 ---
 
-## 12. 給下一個 Session 的接手方式 / Next-session Handoff
+## 12. 英文第一版的練習骨架 / English Practice Skeleton for the First Version
+
+QeKStudy 英文第一版應參考 TeenageStudyTool 已被實際使用過的英文模組，不從零發明新的學習方式。
+
+目前可延續的互動類型包括：
+
+- **基礎單字學習 / vocabulary learning**
+- **單字閃卡 / flashcards**
+- **中翻英 / Chinese-to-English recall**
+- **英翻中 / English-to-Chinese recognition**
+- **配對 Match / matching**
+- **文意字彙 / contextual vocabulary**
+- **克漏字 / cloze**
+- **閱讀與整合題 / reading and integrated questions**
+
+這些不是要求學生每一輪全部做完的固定關卡。
+
+比較適合的產品模型是：
+
+`內容範圍 Content Pool`
+×
+`互動題型 Practice Mode`
+
+同一批「已學內容」可以用不同方式練習；未來新增會考題型時，也應盡量新增 practice mode / question type，而不是複製一份新的課程資料。
+
+學生仍保有選擇權；系統可以推薦路徑，但不強迫依序完成所有模式。
+
+### 會考題型逐步擴充 / Progressive CAP-style expansion
+
+BDD-005 不需要一次支援所有會考題型。
+
+後續應從正式會考題觀察常見能力需求，逐步加入，例如：
+
+- 字彙與語意判斷；
+- 文法與句型；
+- 克漏字；
+- 閱讀理解；
+- 對話與情境理解；
+- 篇章整合與跨段落推論；
+- 其他實際從會考題觀察到、且符合學生已學範圍的能力。
+
+新增順序應由真實使用與老師回饋決定，不為了「題型完整」一次做完。
+
+---
+
+## 13. 學習資料來源政策 / Learning Content Source Policy
+
+產品目標不是「網路上找得到就可以用」，而是使用**可合法重用、可追溯來源**。
+
+可接受來源原則上分成：
+
+1. **Public domain / 公共領域內容**
+   - 版權期限已過；
+   - 法律明定不得作為著作權標的；
+   - 明確屬於 public domain 的政府或機構內容。
+
+2. **Open-licensed / 開放授權內容**
+   - 例如允許重製、改作的 Creative Commons 內容；
+   - 必須保留授權條件要求的 attribution / 署名與來源。
+
+3. **Official exam questions that may be freely used under applicable law / 依法可自由利用的正式考試試題**
+   - 題目本身可用時，QeKStudy 仍應自行撰寫解析與複習指引；
+   - 不直接搬用出版社或參考網站的解答。
+
+4. **課本、參考書、學習網站作為 scope reference / 範圍參考**
+   - 用來理解目前課堂教到哪裡、有哪些單字、文法、能力範圍；
+   - 不因為「買得到」「網路看得到」就直接複製其文章、題目、圖像、解析或編排。
+
+### 重要用詞修正 / Terminology
+
+「公開可取得」不等於「公共財 / public domain」。
+
+因此 QeKStudy 文件建議使用：
+
+> **可合法重用來源 / legally reusable sources**
+
+作為上位概念，再細分 public domain、open license、依法可自由利用試題等來源類型。
+
+### 已確認可作為範例的來源 / Confirmed examples
+
+- **VOA Learning English**：其自行製作的 Learning English 文字、音訊、照片與影片標示為 public domain，但若內容含 AP、Reuters、AFP 等第三方素材則不可直接再利用，必須逐項注意來源。
+- **Tatoeba 文字句子**：不是 public domain；預設為 **CC BY 2.0 FR**，可重用但需要 attribution。音訊授權另計，不能假設與文字相同。
+- **臺灣依法令舉行的考試試題**：依智慧財產局對著作權法第 9 條第 1 項第 5 款的說明，試題本身不得為著作權標的；但具有原創性的解答、解析仍可能受保護。因此 QeKStudy 應自行寫答案解析與複習指引。
+
+---
+
+## 14. 資料 provenance 應成為題目 metadata / Provenance Should Be Question Metadata
+
+未來每一批學習資料至少應能追溯：
+
+- source type：public domain / open license / official exam / curriculum reference
+- source name
+- source URL 或原始識別資訊（適用時）
+- license / legal basis
+- attribution requirement
+- 是否可改作
+- 對應年級 / 學期 / 單元 / knowledge points
+- 若是會考題：正式年度與題號
+
+這不是為了工程完整性，而是避免未來題庫擴大後不知道「這題從哪裡來、能不能繼續使用」。
+
+---
+
+## 15. 給下一個 Session 的接手方式 / Next-session Handoff
 
 下一個 session 不需要重新詢問產品歷史。
 
