@@ -82,3 +82,10 @@ test('TDD-005-CONTENT-08 catalog URL is not a top-level const that can collide i
   assert.doesNotMatch(logic, /const\s+QEK_ENGLISH_CATALOG_URL/);
   assert.match(logic, /function\s+englishCatalogUrl_\s*\(/);
 });
+
+
+test('TDD-005-CONTENT-09 Apps Script exposes a direct content fetch diagnostic', () => {
+  assert.match(logic, /function\s+apiEnglishContentDiagnostic\s*\(/);
+  assert.match(logic, /responseCode/);
+  assert.match(logic, /bodyStart/);
+});
