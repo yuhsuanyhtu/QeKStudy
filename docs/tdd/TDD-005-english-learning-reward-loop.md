@@ -1,7 +1,7 @@
 # TDD-005 — 英文最小學習與獎勵閉環
 # English Minimum Learning & Reward Loop
 
-狀態 Status: **RED — tests written, implementation not started**  
+狀態 Status: **GREEN — 90/90 PASS；尚未完成部署驗收 / deployment acceptance pending**  
 對應 BDD: **BDD-005 APPROVED**  
 對應 SDD: **SDD-005 APPROVED**  
 日期 Date: **2026-09-18**
@@ -185,3 +185,67 @@ GitHub Actions run: `35343824480`
 
 **English:**  
 The Red run is valid: all 57 existing regression tests remain green, while all 33 new BDD-005 contracts fail because the new behavior has not been implemented yet.
+
+
+---
+
+## 7. Green Verification / Green 驗證
+
+GitHub Actions run: `35345783106`
+
+結果：
+
+- Total: **90**
+- Pass: **90**
+- Fail: **0**
+- Overall CI: **success**
+
+實作已讓以下 contracts 轉綠：
+
+- flashcard exposure tracker
+- 中翻英 / 選擇題答案判定
+- CURRENT / PRIOR / CAP eligibility
+- first-attempt truth
+- retry reward protection
+- difficulty / retry / repeat decay / daily cap
+- learning event service
+- saving pool reconstruction
+- controlled family_id / student_id binding contract
+- Apps Script schema v3 contract
+- English UI contract
+
+### Google Sheet 狀態
+
+驗證時發現目前 Demo DB 已是：
+
+- schema_version = **3**
+- 已存在 `learning_events`
+- 欄位與 SDD-005 一致
+
+本輪另外建立一份完整備份：
+
+`QeKStudy Database (Demo) - backup before schema v3 - 2026-09-18`
+
+Backup file ID:
+
+`13Nwz39Qz7vyWEcl_wtTpDEviwWoK2P-Ags4iOmLOKww`
+
+不要刪除這份備份。
+
+### 尚未完成
+
+Green 代表 repo contracts 通過，不代表 Story Done。
+
+仍需：
+
+1. 將 Apps Script 新增檔案與 Code.gs 部署到 Web App。
+2. 設定 `QEK_CONTROLLED_STUDENT_ID`。
+3. 使用實際 English UI 操作。
+4. 驗證 learning_events 真的寫入 Google Sheet。
+5. 驗證 saving pool 從 Sheet 重算。
+6. 驗證 persistence failure 不會假裝成功。
+7. 驗證正式 CAP 題內容與來源；目前 repo 內 CAP 題仍是 acceptance placeholder。
+8. Full regression + UI/BDD acceptance。
+
+**English:**  
+TDD-005 is Green at 90/90, but deployment and real Google Sheet/UI acceptance are still pending.
