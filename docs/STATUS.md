@@ -37,12 +37,13 @@ README 只保留專案入口與目前方向；完整的 Active / Backlog / Done 
 
 **BDD-004 — 使用者登入、學生身分與角色辨識 / Authentication, Learner Identity & Role Recognition**
 
-BDD-005 新增了兩個正式需求：
+BDD-005 新增了一個正式資料需求：
 
-- 學習與獎勵紀錄要寫入 Google Sheet。
-- 零用金要能由被授權家長確認發放並留下紀錄。
+- 學習與獎勵紀錄要寫入 Google Sheet，學習產生的獎勵累積進 saving pool。
 
-這兩項已觸發原本 BDD-004 的 pickup trigger，因此 BDD-004 重新進入 review。
+這已觸發原本 BDD-004 的 pickup trigger，因此 BDD-004 重新進入 review。
+
+真正的零用金發放是另一個家長頁流程，不屬於 BDD-005。
 
 BDD-005 暫停在 SDD Draft，等 BDD-004 重新確認後再繼續。
 
@@ -58,7 +59,7 @@ BDD-005 暫停在 SDD Draft，等 BDD-004 重新確認後再繼續。
 
 | Story | Status | Why deferred / 為什麼現在不做 | Pickup Trigger / 何時撿回 | Existing spec |
 |---|---|---|---|---|
-| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `DEFERRED` | 需求已改為要保存真實學習/獎勵到 Google Sheet，並支援家長確認零用金發放；在身份與權限未重新確認前不能安全進 TDD。 | BDD-004 重新確認並完成必要設計後，先重新 review BDD-005，再重寫 SDD-005。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD draft: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
+| **BDD-005 — 英文最小學習與獎勵閉環 / English Minimum Learning & Reward Loop** | `DEFERRED` | 需求已改為要保存真實學習/獎勵到 Google Sheet，並把學習獎勵累積進 saving pool；在身份與權限未重新確認前不能安全進 TDD。 | BDD-004 重新確認並完成必要設計後，先重新 review BDD-005，再重寫 SDD-005。 | BDD: `docs/bdd/BDD-005-core-practice-review-guidance.feature` · SDD draft: `docs/sdd/SDD-005-english-learning-reward-loop.md` |
 
 ## Done / 已完成
 
