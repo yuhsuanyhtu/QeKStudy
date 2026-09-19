@@ -444,8 +444,19 @@ function withScriptLock_(work) {
   }
 }
 
+// Apps Script resets globals per execution, so this memo only saves repeated
+// openById calls within one request.
+var qekSpreadsheetMemo_ = null;
+
+function spreadsheet_() {
+  if (!qekSpreadsheetMemo_) {
+    qekSpreadsheetMemo_ = SpreadsheetApp.openById(QEK_SPREADSHEET_ID);
+  }
+  return qekSpreadsheetMemo_;
+}
+
 function sheet_(name) {
-  const target = SpreadsheetApp.openById(QEK_SPREADSHEET_ID).getSheetByName(name);
+  const target = spreadsheet_().getSheetByName(name);
   if (!target) throw qekError_('SCHEMA_MISMATCH');
   return target;
 }
@@ -488,7 +499,9 @@ function listLearningEventsForStudent_(studentId) {
     .map(function(row) {
       return {
         learningEventId: String(row.learning_event_id),
-        occurredAt: String(row.occurred_at),
+        occurredAt: isDateValue_(row.occurred_at)
+          ? row.occurred_at.toISOString()
+          : String(row.occurred_at),
         familyId: String(row.family_id),
         studentId: String(row.student_id),
         subject: String(row.subject),
@@ -514,9 +527,20 @@ function calculateSavingPool_(events) {
   }, 0);
 }
 
+function isDateValue_(value) {
+  return Object.prototype.toString.call(value) === '[object Date]';
+}
+
+// Daily caps follow the Asia/Taipei calendar day; occurred_at is stored as UTC ISO text.
+function taipeiDate_(value) {
+  const date = isDateValue_(value) ? value : new Date(String(value || ''));
+  if (isNaN(date.getTime())) return '';
+  return Utilities.formatDate(date, 'Asia/Taipei', 'yyyy-MM-dd');
+}
+
 function calculateDailySubjectEarned_(events, subject, dateString) {
   return (events || []).reduce(function(sum, event) {
-    const eventDate = String(event.occurredAt || '').slice(0, 10);
+    const eventDate = taipeiDate_(event.occurredAt);
     if (event.subject === subject && eventDate === dateString) {
       return sum + Math.max(0, Number(event.rewardAmount) || 0);
     }
