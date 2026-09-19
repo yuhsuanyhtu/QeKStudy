@@ -2,7 +2,47 @@ function englishCatalogUrl_() {
   return 'https://yuhsuanyhtu.github.io/QeKStudy/data/english/catalog.json';
 }
 
-function loadEnglishCatalog_() {
+// Repo content changes still need no redeploy; they appear once this cache
+// expires (GitHub Pages itself serves the file with max-age=600).
+function englishCatalogCacheSeconds_() {
+  return 300;
+}
+
+function englishCatalogCacheKey_() {
+  return 'qek:english:catalog:' + englishCatalogUrl_();
+}
+
+function loadEnglishCatalog_(options) {
+  const fresh = Boolean(options && options.fresh);
+  const cache = CacheService.getScriptCache();
+  if (!fresh) {
+    const cachedCatalog = cachedEnglishCatalog_(cache);
+    if (cachedCatalog) return cachedCatalog;
+  }
+
+  const catalog = fetchEnglishCatalog_();
+  try {
+    cache.put(englishCatalogCacheKey_(), JSON.stringify(catalog), englishCatalogCacheSeconds_());
+  } catch (error) {
+    // Oversized or unavailable cache only costs speed, never correctness.
+    console.warn('[QeK English] catalog not cached: ' + error);
+  }
+  return catalog;
+}
+
+function cachedEnglishCatalog_(cache) {
+  try {
+    const cached = cache.get(englishCatalogCacheKey_());
+    if (!cached) return null;
+    const catalog = JSON.parse(cached);
+    validateEnglishCatalog_(catalog);
+    return catalog;
+  } catch (error) {
+    return null;
+  }
+}
+
+function fetchEnglishCatalog_() {
   let response;
   try {
     response = UrlFetchApp.fetch(englishCatalogUrl_(), {
@@ -86,6 +126,33 @@ function findEnglishQuestionRevision_(catalog, questionId, revision) {
       Number(question.revision) === Number(revision)
     );
   }) || null;
+}
+
+// A browser may hold a newer catalog than this script's cache; refetch once on a miss.
+function loadEnglishQuestionRevision_(questionId, revision) {
+  let catalog = loadEnglishCatalog_();
+  let question = findEnglishQuestionRevision_(catalog, questionId, revision);
+  if (!question) {
+    catalog = loadEnglishCatalog_({ fresh: true });
+    question = findEnglishQuestionRevision_(catalog, questionId, revision);
+  }
+  if (!question) throw qekError_('CONTENT_NOT_AVAILABLE');
+  return { catalog: catalog, question: question };
+}
+
+function isRequestedLesson_(lesson, lessonId, revision) {
+  return lesson.lessonId === lessonId && Number(lesson.revision) === revision;
+}
+
+function loadEnglishLessonRevision_(lessonId, revision) {
+  let catalog = loadEnglishCatalog_();
+  if (!isRequestedLesson_(catalog.lesson, lessonId, revision)) {
+    catalog = loadEnglishCatalog_({ fresh: true });
+  }
+  if (!isRequestedLesson_(catalog.lesson, lessonId, revision)) {
+    throw qekError_('CONTENT_NOT_AVAILABLE');
+  }
+  return catalog;
 }
 
 function publicEnglishQuestion_(question) {
@@ -191,6 +258,8 @@ function currentSessionAttempts_(events, contentId, sessionId) {
       event.contentId === contentId &&
       String(event.sessionId || '') === String(sessionId || '')
     );
+  }).sort(function(a, b) {
+    return Number(a.attemptNo) - Number(b.attemptNo);
   });
 }
 
@@ -200,20 +269,82 @@ function currentSessionAlreadyRewarded_(events, contentId, sessionId) {
   });
 }
 
+function englishToday_() {
+  return taipeiDate_(new Date());
+}
+
+function positiveInteger_(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+// English endpoints report an error category so the page can tell content,
+// busy, persistence and request problems apart.
+function englishApiResult_(work) {
+  try {
+    return { ok: true, data: work() };
+  } catch (error) {
+    const expected = Boolean(error && error.code);
+    const code = expected ? String(error.code) : unexpectedEnglishErrorCode_(error);
+    if (!expected) {
+      console.error('[QeK English] ' + code + ': ' + (error && error.stack ? error.stack : String(error)));
+    }
+    return {
+      ok: false,
+      error: {
+        code: code,
+        category: englishErrorCategory_(code),
+        message: error && error.message ? String(error.message) : code,
+      },
+    };
+  }
+}
+
+function unexpectedEnglishErrorCode_(error) {
+  const message = String(error && error.message ? error.message : error);
+  return /too many|simultaneous|rate limit|timed? ?out|lock|busy|try again later/i.test(message)
+    ? 'SERVER_BUSY'
+    : 'SERVER_ERROR';
+}
+
+function englishErrorCategory_(code) {
+  if (/^CONTENT_/.test(code)) return 'CONTENT';
+  if (code === 'PERSISTENCE_BUSY' || code === 'SERVER_BUSY') return 'SERVER_BUSY';
+  if (code === 'PERSISTENCE_FAILED') return 'PERSISTENCE';
+  if (code === 'ANSWER_REQUIRED' || code === 'FLASHCARD_NOT_COMPLETE') return 'REQUEST';
+  if (
+    code === 'SCHEMA_MISMATCH' ||
+    code === 'CONTROLLED_STUDENT_NOT_CONFIGURED' ||
+    code === 'RESOURCE_NOT_AVAILABLE'
+  ) {
+    return 'CONFIGURATION';
+  }
+  return 'SERVER';
+}
+
+function appendLearningEventOrFail_(event) {
+  try {
+    appendLearningEvent_(event);
+    SpreadsheetApp.flush();
+  } catch (error) {
+    console.error('[QeK English] learning_events write failed: ' + (error && error.stack ? error.stack : error));
+    throw qekError_('PERSISTENCE_FAILED');
+  }
+}
+
 function apiEnglishBootstrap() {
-  return apiResult_(function() {
+  return englishApiResult_(function() {
     ensureSchema_();
     const student = controlledStudent_();
     const events = listLearningEventsForStudent_(student.studentId);
     const catalog = loadEnglishCatalog_();
-    const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
     const config = getEnglishRewardConfig_();
 
     return {
       student: student,
       catalogVersion: catalog.catalogVersion,
       savingPool: calculateSavingPool_(events),
-      todayEnglishEarned: calculateDailySubjectEarned_(events, 'ENGLISH', today),
+      todayEnglishEarned: calculateDailySubjectEarned_(events, 'ENGLISH', englishToday_()),
       rewardConfigured: config.configured === true,
       dailyCap: config.configured === true ? config.dailyCap : null,
       lesson: {
@@ -237,101 +368,111 @@ function apiEnglishBootstrap() {
   });
 }
 
+function answerResult_(event, events, config, replayed) {
+  return {
+    correct: event.correct === true,
+    attemptNo: Number(event.attemptNo),
+    firstAttemptCorrect: event.firstAttemptCorrect === true,
+    rewardAmount: Number(event.rewardAmount) || 0,
+    reviewTarget: event.correct === true ? '' : String(event.reviewTarget || ''),
+    rewardConfigured: config.configured === true,
+    savingPool: calculateSavingPool_(events),
+    todayEnglishEarned: calculateDailySubjectEarned_(events, 'ENGLISH', englishToday_()),
+    replayed: replayed,
+  };
+}
+
 function apiEnglishSubmitAnswer(input) {
-  return apiResult_(function() {
+  return englishApiResult_(function() {
     ensureSchema_();
     const sessionId = String(input && input.sessionId || '');
     const questionId = String(input && input.questionId || '');
     const revision = Number(input && input.revision);
     if (!sessionId || !questionId || !revision) throw qekError_('ANSWER_REQUIRED');
+    // Idempotency only: lets a resent attempt replay what was recorded. It can
+    // never raise a reward or choose correctness.
+    const clientAttemptNo = positiveInteger_(input && input.clientAttemptNo);
 
     const student = controlledStudent_();
-    const catalog = loadEnglishCatalog_();
-    const question = findEnglishQuestionRevision_(
-      catalog,
-      questionId,
-      revision
-    );
-    if (!question) throw qekError_('CONTENT_NOT_AVAILABLE');
-
+    const content = loadEnglishQuestionRevision_(questionId, revision);
+    const catalog = content.catalog;
+    const question = content.question;
     const contentId = contentKey_(question.questionId, question.revision);
-    const events = listLearningEventsForStudent_(student.studentId);
-    const attempts = currentSessionAttempts_(events, contentId, sessionId);
-    const attemptNo = attempts.length + 1;
     const correct = evaluateQuestion_(question, input);
-    const firstAttemptCorrect = attempts.length
-      ? Boolean(attempts[0].firstAttemptCorrect)
-      : correct;
-
-    let rewardAmount = 0;
     const config = getEnglishRewardConfig_();
-    if (
-      correct &&
-      config.configured === true &&
-      !currentSessionAlreadyRewarded_(events, contentId, sessionId)
-    ) {
-      const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-      const todayEarned = calculateDailySubjectEarned_(events, 'ENGLISH', today);
-      const previousSuccessCount = previousSuccessfulContentCount_(
-        events,
-        contentId,
-        sessionId
-      );
-      rewardAmount = calculateEnglishReward_({
-        baseAmount: config.difficultyBase[question.difficulty] || 0,
-        attemptNo: attemptNo,
-        previousSuccessCount: previousSuccessCount,
-        todayEarned: todayEarned,
-        config: config,
+
+    // History read, attempt numbering, reward and append form one critical
+    // section so overlapping requests cannot share an attempt or a reward.
+    return withScriptLock_(function() {
+      const events = listLearningEventsForStudent_(student.studentId);
+      const attempts = currentSessionAttempts_(events, contentId, sessionId);
+
+      const recorded = clientAttemptNo && attempts.find(function(attempt) {
+        return Number(attempt.attemptNo) === clientAttemptNo;
       });
-    }
+      if (recorded) return answerResult_(recorded, events, config, true);
 
-    const event = {
-      learningEventId: 'learn_' + Utilities.getUuid(),
-      occurredAt: new Date().toISOString(),
-      familyId: student.familyId,
-      studentId: student.studentId,
-      subject: 'ENGLISH',
-      sessionId: sessionId,
-      eventType: 'ANSWER_ATTEMPT',
-      lessonId: '',
-      contentId: contentId,
-      questionSourceType: question.sourceType,
-      attemptNo: attemptNo,
-      correct: correct,
-      firstAttemptCorrect: firstAttemptCorrect,
-      rewardAmount: rewardAmount,
-      reviewTarget: correct ? '' : question.reviewTarget,
-      sourceRef: sourceRefForQuestion_(catalog, question),
-      note: '',
-    };
+      const attemptNo = attempts.length
+        ? Number(attempts[attempts.length - 1].attemptNo) + 1
+        : 1;
+      const firstAttemptCorrect = attempts.length
+        ? Boolean(attempts[0].firstAttemptCorrect)
+        : correct;
 
-    withScriptLock_(function() {
-      appendLearningEvent_(event);
-      SpreadsheetApp.flush();
+      let rewardAmount = 0;
+      if (
+        correct &&
+        config.configured === true &&
+        !currentSessionAlreadyRewarded_(events, contentId, sessionId)
+      ) {
+        rewardAmount = calculateEnglishReward_({
+          baseAmount: config.difficultyBase[question.difficulty] || 0,
+          attemptNo: attemptNo,
+          previousSuccessCount: previousSuccessfulContentCount_(events, contentId, sessionId),
+          todayEarned: calculateDailySubjectEarned_(events, 'ENGLISH', englishToday_()),
+          config: config,
+        });
+      }
+
+      const event = {
+        learningEventId: 'learn_' + Utilities.getUuid(),
+        occurredAt: new Date().toISOString(),
+        familyId: student.familyId,
+        studentId: student.studentId,
+        subject: 'ENGLISH',
+        sessionId: sessionId,
+        eventType: 'ANSWER_ATTEMPT',
+        lessonId: '',
+        contentId: contentId,
+        questionSourceType: question.sourceType,
+        attemptNo: attemptNo,
+        correct: correct,
+        firstAttemptCorrect: firstAttemptCorrect,
+        rewardAmount: rewardAmount,
+        reviewTarget: correct ? '' : question.reviewTarget,
+        sourceRef: sourceRefForQuestion_(catalog, question),
+        note: '',
+      };
+
+      appendLearningEventOrFail_(event);
+      return answerResult_(event, events.concat([event]), config, false);
     });
-
-    const updatedEvents = listLearningEventsForStudent_(student.studentId);
-    const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-    return {
-      correct: correct,
-      attemptNo: attemptNo,
-      firstAttemptCorrect: firstAttemptCorrect,
-      rewardAmount: rewardAmount,
-      reviewTarget: correct ? '' : question.reviewTarget,
-      rewardConfigured: config.configured === true,
-      savingPool: calculateSavingPool_(updatedEvents),
-      todayEnglishEarned: calculateDailySubjectEarned_(
-        updatedEvents,
-        'ENGLISH',
-        today
-      ),
-    };
   });
 }
 
+function flashcardResult_(event, events, config, replayed) {
+  return {
+    complete: true,
+    rewardAmount: Number(event.rewardAmount) || 0,
+    rewardConfigured: config.configured === true,
+    savingPool: calculateSavingPool_(events),
+    todayEnglishEarned: calculateDailySubjectEarned_(events, 'ENGLISH', englishToday_()),
+    replayed: replayed,
+  };
+}
+
 function apiEnglishCompleteFlashcards(input) {
-  return apiResult_(function() {
+  return englishApiResult_(function() {
     ensureSchema_();
     const sessionId = String(input && input.sessionId || '');
     const lessonId = String(input && input.lessonId || '');
@@ -340,14 +481,8 @@ function apiEnglishCompleteFlashcards(input) {
     if (!sessionId || !lessonId || !revision) throw qekError_('CONTENT_INVALID');
 
     const student = controlledStudent_();
-    const catalog = loadEnglishCatalog_();
+    const catalog = loadEnglishLessonRevision_(lessonId, revision);
     const lesson = catalog.lesson;
-    if (
-      lesson.lessonId !== lessonId ||
-      Number(lesson.revision) !== revision
-    ) {
-      throw qekError_('CONTENT_NOT_AVAILABLE');
-    }
 
     const complete = lesson.words.every(function(word) {
       return Number(exposureByWordId[word.wordId] || 0) >= 1000;
@@ -355,27 +490,27 @@ function apiEnglishCompleteFlashcards(input) {
     if (!complete) throw qekError_('FLASHCARD_NOT_COMPLETE');
 
     const contentId = contentKey_(lesson.lessonId, lesson.revision);
-    const events = listLearningEventsForStudent_(student.studentId);
-    const alreadyRewarded = events.some(function(event) {
-      return (
-        event.eventType === 'FLASHCARD_COMPLETE' &&
-        event.contentId === contentId &&
-        String(event.sessionId || '') === sessionId
-      );
-    });
-
     const config = getEnglishRewardConfig_();
-    const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-    const todayEarned = calculateDailySubjectEarned_(events, 'ENGLISH', today);
-    const rewardAmount =
-      alreadyRewarded || config.configured !== true
+
+    return withScriptLock_(function() {
+      const events = listLearningEventsForStudent_(student.studentId);
+      const existing = events.find(function(event) {
+        return (
+          event.eventType === 'FLASHCARD_COMPLETE' &&
+          event.contentId === contentId &&
+          String(event.sessionId || '') === sessionId
+        );
+      });
+      if (existing) return flashcardResult_(existing, events, config, true);
+
+      const todayEarned = calculateDailySubjectEarned_(events, 'ENGLISH', englishToday_());
+      const rewardAmount = config.configured !== true
         ? 0
         : Math.min(
             Math.max(0, Number(config.flashcardLessonCompletion) || 0),
             Math.max(0, Number(config.dailyCap) - todayEarned)
           );
 
-    if (!alreadyRewarded) {
       const event = {
         learningEventId: 'learn_' + Utilities.getUuid(),
         occurredAt: new Date().toISOString(),
@@ -396,27 +531,11 @@ function apiEnglishCompleteFlashcards(input) {
         note: 'all_words_visible_at_least_1000ms',
       };
 
-      withScriptLock_(function() {
-        appendLearningEvent_(event);
-        SpreadsheetApp.flush();
-      });
-    }
-
-    const updatedEvents = listLearningEventsForStudent_(student.studentId);
-    return {
-      complete: true,
-      rewardAmount: rewardAmount,
-      rewardConfigured: config.configured === true,
-      savingPool: calculateSavingPool_(updatedEvents),
-      todayEnglishEarned: calculateDailySubjectEarned_(
-        updatedEvents,
-        'ENGLISH',
-        today
-      ),
-    };
+      appendLearningEventOrFail_(event);
+      return flashcardResult_(event, events.concat([event]), config, false);
+    });
   });
 }
-
 
 function apiEnglishContentDiagnostic() {
   const url = englishCatalogUrl_();
