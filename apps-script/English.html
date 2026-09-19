@@ -80,8 +80,8 @@
   <section class="panel" id="home">
     <h2>今天要做什麼？</h2>
     <div class="row">
-      <button id="start-flashcards" class="primary">單字閃卡</button>
-      <button id="start-quiz">中翻英測驗</button>
+      <button id="start-flashcards" class="primary" disabled>單字閃卡</button>
+      <button id="start-quiz" disabled>中翻英測驗</button>
     </div>
   </section>
 
@@ -94,6 +94,7 @@
       <button id="flashcard-prev">上一個</button>
       <button id="flashcard-next">下一個</button>
       <button id="flashcard-back">回首頁</button>
+      <button id="flashcard-save-retry" class="hidden">重新儲存閃卡紀錄</button>
     </div>
     <p id="flashcard-result"></p>
   </section>
@@ -124,6 +125,7 @@
   </section>
 
   <p id="status" role="status"></p>
+  <button id="reload-bootstrap" class="hidden">重新載入</button>
 </main>
 
 <script>
@@ -133,6 +135,8 @@ var flashSessionId = "";
 var flashExposure = {};
 var flashLastTick = null;
 var flashSubmitted = false;
+var flashSaveInFlight = false;
+var flashSaveFailed = false;
 
 var quizIndex = 0;
 var quizSessionId = "";
@@ -141,6 +145,19 @@ var firstTryCount = 0;
 var retryCorrectCount = 0;
 var unresolvedCount = 0;
 var reviewItems = [];
+var answerInFlight = false;
+var currentAttemptNo = 1;
+var baseStatusText = "";
+
+var ERROR_MESSAGES = {
+  TRANSPORT: "連線中斷或伺服器沒有回應，無法確認這次是否已記錄。可以直接再試一次：同一次作答不會被重複記錄或重複給獎勵。",
+  SERVER_BUSY: "伺服器忙碌，這次沒有記錄。請稍等一下再試一次。",
+  PERSISTENCE: "寫入 Google Sheet 失敗。可以再試一次：同一次作答不會被重複記錄或重複給獎勵。",
+  CONTENT: "題目內容暫時無法載入，請稍後按重新載入。",
+  REQUEST: "這次送出的資料不完整，請重新開始這一項練習。",
+  CONFIGURATION: "學習頁的伺服器設定有問題，請通知家長。",
+  SERVER: "伺服器發生未預期的錯誤，請稍後再試。"
+};
 
 function newSessionId(prefix) {
   return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
@@ -172,10 +189,13 @@ function setMoney(today, pool) {
 }
 
 function load() {
+  document.getElementById("reload-bootstrap").classList.add("hidden");
+  setStatus("正在載入學習資料…", "muted");
+
   google.script.run
     .withSuccessHandler(function(result) {
       if (!result || !result.ok) {
-        showError(result && result.error);
+        showBootstrapError(result && result.error);
         return;
       }
 
@@ -183,20 +203,26 @@ function load() {
       document.getElementById("catalog-version").textContent =
         bootstrap.catalogVersion;
 
-      if (!bootstrap.rewardConfigured) {
-        document.getElementById("status").className = "muted";
-        document.getElementById("status").textContent =
-          "目前先測學習與紀錄流程；正式零用金金額尚未確認，因此不會加錢。";
-      }
+      baseStatusText = bootstrap.rewardConfigured
+        ? ""
+        : "目前先測學習與紀錄流程；正式零用金金額尚未確認，因此不會加錢。";
+      restoreStatus();
 
       setMoney(bootstrap.todayEnglishEarned, bootstrap.savingPool);
       renderFlashcard();
       renderQuizQuestion();
+      document.getElementById("start-flashcards").disabled = false;
+      document.getElementById("start-quiz").disabled = false;
     })
     .withFailureHandler(function() {
-      showError({ code: "PERSISTENCE_FAILED" });
+      showBootstrapError(transportError());
     })
     .apiEnglishBootstrap();
+}
+
+function showBootstrapError(error) {
+  showError(error);
+  document.getElementById("reload-bootstrap").classList.remove("hidden");
 }
 
 function tickFlashcard() {
@@ -266,7 +292,9 @@ function switchCard(delta) {
 }
 
 function maybeCompleteFlashcards() {
-  if (!bootstrap || flashSubmitted) return;
+  // A failed save waits for the student's explicit retry instead of being
+  // resent on every 200ms tick.
+  if (!bootstrap || flashSubmitted || flashSaveInFlight || flashSaveFailed) return;
 
   var words = bootstrap.lesson.words || [];
   var complete =
@@ -277,36 +305,54 @@ function maybeCompleteFlashcards() {
 
   if (!complete) return;
 
-  flashSubmitted = true;
+  saveFlashcards();
+}
+
+function saveFlashcards() {
+  var requestSessionId = flashSessionId;
+  flashSaveInFlight = true;
+  flashSaveFailed = false;
+  document.getElementById("flashcard-save-retry").classList.add("hidden");
+  setStatus("正在儲存閃卡完成紀錄…", "muted");
 
   google.script.run
     .withSuccessHandler(function(result) {
+      flashSaveInFlight = false;
+
       if (!result || !result.ok) {
-        flashSubmitted = false;
-        showError(result && result.error);
+        flashSaveFailedFor(requestSessionId, result && result.error);
         return;
       }
 
       var data = result.data;
+      setMoney(data.todayEnglishEarned, data.savingPool);
+      restoreStatus();
+      if (requestSessionId !== flashSessionId) return;
 
+      flashSubmitted = true;
       document.getElementById("flashcard-result").className = "ok";
       document.getElementById("flashcard-result").textContent =
         data.rewardConfigured
           ? "整課完成，本次 +$" + data.rewardAmount
           : "整課完成；零用金規則尚未設定，本次先記錄學習但不加錢。";
-
-      setMoney(data.todayEnglishEarned, data.savingPool);
     })
     .withFailureHandler(function() {
-      flashSubmitted = false;
-      showError({ code: "PERSISTENCE_FAILED" });
+      flashSaveInFlight = false;
+      flashSaveFailedFor(requestSessionId, transportError());
     })
     .apiEnglishCompleteFlashcards({
-      sessionId: flashSessionId,
+      sessionId: requestSessionId,
       lessonId: bootstrap.lesson.lessonId,
       revision: bootstrap.lesson.revision,
       exposureByWordId: flashExposure
     });
+}
+
+function flashSaveFailedFor(requestSessionId, error) {
+  showError(error);
+  if (requestSessionId !== flashSessionId) return;
+  flashSaveFailed = true;
+  document.getElementById("flashcard-save-retry").classList.remove("hidden");
 }
 
 function renderQuizQuestion() {
@@ -326,6 +372,7 @@ function renderQuizQuestion() {
   }
 
   currentResolved = false;
+  currentAttemptNo = 1;
 
   document.getElementById("question-kind").textContent =
     question.sourceType + " · " + question.kind;
@@ -365,14 +412,27 @@ function currentQuestion() {
     : null;
 }
 
+function setAnswerBusy(busy) {
+  answerInFlight = busy;
+  ["submit-answer", "retry-answer", "continue-question"].forEach(function(id) {
+    document.getElementById(id).disabled = busy;
+  });
+}
+
 function submitAnswer() {
+  if (answerInFlight) return;
   var question = currentQuestion();
   if (!question) return;
 
+  var requestSessionId = quizSessionId;
+  var requestIndex = quizIndex;
+  // Same number on a resend after a lost response, so the server replays the
+  // recorded attempt instead of adding another one.
   var input = {
     sessionId: quizSessionId,
     questionId: question.questionId,
-    revision: question.revision
+    revision: question.revision,
+    clientAttemptNo: currentAttemptNo
   };
 
   if (question.kind === "MULTIPLE_CHOICE") {
@@ -383,11 +443,12 @@ function submitAnswer() {
     input.answer = answerInput ? answerInput.value : "";
   }
 
-  document.getElementById("submit-answer").disabled = true;
+  setAnswerBusy(true);
+  setStatus("正在判定並儲存作答…", "muted");
 
   google.script.run
     .withSuccessHandler(function(result) {
-      document.getElementById("submit-answer").disabled = false;
+      setAnswerBusy(false);
 
       if (!result || !result.ok) {
         showError(result && result.error);
@@ -396,6 +457,11 @@ function submitAnswer() {
 
       var data = result.data;
       setMoney(data.todayEnglishEarned, data.savingPool);
+      restoreStatus();
+      // The student already moved on; never paint this result onto another question.
+      if (requestSessionId !== quizSessionId || requestIndex !== quizIndex) return;
+
+      currentAttemptNo = Number(data.attemptNo) + 1;
 
       if (data.correct) {
         currentResolved = true;
@@ -440,13 +506,14 @@ function submitAnswer() {
       renderSummary();
     })
     .withFailureHandler(function() {
-      document.getElementById("submit-answer").disabled = false;
-      showError({ code: "PERSISTENCE_FAILED" });
+      setAnswerBusy(false);
+      showError(transportError());
     })
     .apiEnglishSubmitAnswer(input);
 }
 
 function continueQuestion() {
+  if (answerInFlight) return;
   var question = currentQuestion();
 
   if (question && !currentResolved) {
@@ -467,11 +534,27 @@ function renderSummary() {
     reviewItems.length ? reviewItems.join("；") : "尚無";
 }
 
-function showError(error) {
+function setStatus(text, className) {
   var status = document.getElementById("status");
-  status.className = "error";
-  status.textContent =
-    error && error.code ? error.code : "無法載入資料";
+  status.className = className || "";
+  status.textContent = text;
+}
+
+function restoreStatus() {
+  setStatus(baseStatusText, "muted");
+}
+
+function transportError() {
+  return { code: "SERVER_REQUEST_FAILED", category: "TRANSPORT" };
+}
+
+function showError(error) {
+  var category = (error && error.category) || "SERVER";
+  var code = (error && error.code) || category;
+  setStatus(
+    (ERROR_MESSAGES[category] || ERROR_MESSAGES.SERVER) + "（" + code + "）",
+    "error"
+  );
 }
 
 function escapeHtml(value) {
@@ -487,6 +570,9 @@ document.getElementById("start-flashcards").onclick = function() {
   flashExposure = {};
   flashIndex = 0;
   flashSubmitted = false;
+  flashSaveFailed = false;
+  document.getElementById("flashcard-save-retry").classList.add("hidden");
+  document.getElementById("flashcard-result").textContent = "";
 
   show("flashcards");
   renderFlashcard();
@@ -518,9 +604,17 @@ document.getElementById("flashcard-back").onclick = function() {
   show("home");
 };
 
+document.getElementById("flashcard-save-retry").onclick = function() {
+  if (flashSaveInFlight) return;
+  saveFlashcards();
+};
+
+document.getElementById("reload-bootstrap").onclick = load;
+
 document.getElementById("submit-answer").onclick = submitAnswer;
 
 document.getElementById("retry-answer").onclick = function() {
+  if (answerInFlight) return;
   document.getElementById("retry-answer").classList.add("hidden");
   document.getElementById("continue-question").classList.add("hidden");
 
